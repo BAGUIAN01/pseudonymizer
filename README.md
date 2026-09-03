@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Anonymizer — Filtre IA
 
-## Getting Started
+Application de bureau (Windows, macOS, Linux) de pseudonymisation et de
+dé-pseudonymisation de documents. Tout le traitement se fait sur la machine :
+aucune donnée personnelle ne quitte le poste.
 
-First, run the development server:
+Remplace le logiciel Tkinter existant, dont le mode d'emploi impose de préparer
+à la main un fichier Excel des valeurs à remplacer. Ici, les données
+structurées sont pré-détectées et les autres se sélectionnent directement dans
+le document.
+
+## Les deux flux
+
+**01 — Pseudonymiser.** On charge un document, l'application pré-détecte
+e-mails, téléphones, montants, identifiants, dates et adresses par expressions
+régulières, l'utilisateur complète la sélection en cliquant les mots dans le
+texte (ou en glissant sur plusieurs mots), ajuste le type et le pseudonyme de
+chaque terme, puis lance le traitement. Sortie : le document dans son format
+d'origine, plus un registre de correspondances.
+
+**02 — Dé-pseudonymiser.** On charge le document pseudonymisé et son registre,
+et l'application restaure les valeurs d'origine.
+
+## Pile technique
+
+| Couche | Choix |
+| --- | --- |
+| Interface | Next.js 16 (App Router, JavaScript, export statique) |
+| Composants | shadcn/ui + Tailwind v4 |
+| État | Zustand |
+| Coquille native | Tauri v2 (Rust) |
+
+L'interface est entièrement cliente : `output: "export"` produit un dossier
+`out/` que Tauri embarque. Pas de serveur Node dans le binaire.
+
+## Démarrer
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # interface seule, dans le navigateur
+npm run tauri:dev    # application complète (nécessite Rust)
+npm run tauri:build  # installateur pour la plateforme courante
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Rust est requis pour tout ce qui touche à `tauri:dev` / `tauri:build`.**
+Installer via [rustup.rs](https://rustup.rs), puis, sous Windows, les
+« Build Tools for Visual Studio » avec la charge de travail C++ et WebView2
+(déjà présent sur Windows 11).
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+Sans Rust, `npm run dev` fonctionne : l'interface bascule automatiquement sur
+un mode de secours (voir `src/lib/backend.js`) et le lien « charger le document
+d'exemple » permet de parcourir les deux flux de bout en bout.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Organisation
 
-## Learn More
+```
+src/
+  app/                     layout (polices, thème), page unique
+  components/
+    anonymizer-app.jsx     assemblage de la fenêtre
+    mode-sidebar.jsx       colonne de gauche : marque, modes, mention locale
+    top-bar.jsx            nom du fichier, bascule source/résultat, fermeture
+    drop-stage.jsx         écran de dépôt
+    document-view.jsx      rendu tokenisé et sélection des termes
+    term-panel.jsx         liste des correspondances
+    deliverables.jsx       récupération des fichiers produits
+  lib/
+    tokenize.js            découpage, occurrences, substitution
+    detect.js              pré-détection par regex, typage heuristique
+    types.js               les 9 catégories et leurs couleurs
+    backend.js             appels Tauri + repli navigateur
+    sample-doc.js          exercice de démonstration
+  store/use-anonymizer.js  état applicatif
+src-tauri/
+  src/commands.rs          commandes exposées au frontend
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Parti pris d'interface
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+L'application est plate : aucune ombre portée, sauf sur le sélecteur de mode de
+la colonne de gauche, seul élément volontairement détaché. Les zones sont
+séparées par des filets d'un pixel, pas par des cartes empilées.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## État d'avancement
 
-## Deploy on Vercel
+L'interface est complète et fonctionnelle. Le backend Rust est déclaré mais pas
+encore implémenté : `src-tauri/src/commands.rs` fige les signatures et les types
+échangés, chaque commande renvoyant pour l'instant une erreur.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Restent à écrire :
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **`extract_document`** — extraction du texte depuis PDF, DOCX, XLSX, TXT.
+2. **`apply_pseudonymisation`** — réécriture du document dans son format
+   d'origine. Pour le PDF, stratégie retenue : rédaction en place (effacer la
+   zone du terme, redessiner le pseudonyme dans la même police, en réduisant le
+   corps si le pseudonyme est plus large). Attention aux polices partiellement
+   embarquées : les glyphes `[`, `]` et `_` peuvent manquer.
+3. **`write_registry` / `read_registry`** — registre Excel au format du
+   logiciel existant, pour rester interopérable avec lui. Un fichier d'exemple
+   du dossier `Registres` est nécessaire pour caler les colonnes exactes.
+4. **`reveal_in_folder`** — ouverture de l'explorateur sur le fichier produit.
+
+### Limite connue
+
+Le `+` d'un numéro international n'appartient pas à un token de mot : il reste
+donc hors du surlignage et hors du remplacement (`+221 77 812 44 09` devient
+`+ [TELEPHONE_0001]`). À traiter dans la substitution Rust, qui travaille sur le
+texte brut et peut absorber le caractère adjacent.

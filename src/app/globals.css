@@ -1,26 +1,169 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-heading: var(--font-space-grotesk);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/*
+  L'application est mono-theme (sombre) et entierement plate : aucune ombre
+  portee hors du selecteur de mode. Les deux blocs sont identiques pour que
+  les composants shadcn restent corrects meme sans la classe `.dark`.
+*/
+:root,
+.dark {
+  --background: #07080a;
+  --foreground: #e8eaed;
+
+  --card: rgba(255, 255, 255, 0.04);
+  --card-foreground: #e8eaed;
+  --popover: #12151a;
+  --popover-foreground: #e8eaed;
+
+  --primary: #cbff4d;
+  --primary-foreground: #0b0d11;
+  --secondary: rgba(255, 255, 255, 0.06);
+  --secondary-foreground: #c7ccd3;
+
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: #7c8590;
+  --accent: rgba(203, 255, 77, 0.14);
+  --accent-foreground: #e9ffb8;
+
+  --destructive: #ff8a8a;
+
+  --border: rgba(255, 255, 255, 0.09);
+  --input: rgba(255, 255, 255, 0.09);
+  --ring: rgba(203, 255, 77, 0.45);
+
+  --chart-1: #cbff4d;
+  --chart-2: #6ee7ff;
+  --chart-3: #c4a6ff;
+  --chart-4: #ffc46e;
+  --chart-5: #8fe3b0;
+
+  --radius: 0.75rem;
+
+  --sidebar: transparent;
+  --sidebar-foreground: #8a9199;
+  --sidebar-primary: #cbff4d;
+  --sidebar-primary-foreground: #0b0d11;
+  --sidebar-accent: rgba(203, 255, 77, 0.14);
+  --sidebar-accent-foreground: #e9ffb8;
+  --sidebar-border: rgba(255, 255, 255, 0.09);
+  --sidebar-ring: rgba(203, 255, 77, 0.45);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    color-scheme: dark;
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground;
+    height: 100%;
+    background:
+      radial-gradient(1100px 560px at 50% -12%, #17201b 0%, #07080a 60%),
+      #07080a;
+    background-attachment: fixed;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Empeche la selection native de texte de parasiter la selection de termes */
+  .select-none-doc {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+/* Barres de defilement discretes, coherentes avec les panneaux */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+  background-clip: content-box;
+}
+
+@keyframes anonymizer-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes anonymizer-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
