@@ -28,6 +28,7 @@ et l'application restaure les valeurs d'origine.
 | Interface | Next.js 16 (App Router, JavaScript, export statique) |
 | Composants | shadcn/ui + Tailwind v4 |
 | État | Zustand |
+| Lecture des documents | pdf.js, mammoth, SheetJS — côté client |
 | Coquille native | Tauri v2 (Rust) |
 
 L'interface est entièrement cliente : `output: "export"` produit un dossier
@@ -47,9 +48,10 @@ Installer via [rustup.rs](https://rustup.rs), puis, sous Windows, les
 « Build Tools for Visual Studio » avec la charge de travail C++ et WebView2
 (déjà présent sur Windows 11).
 
-Sans Rust, `npm run dev` fonctionne : l'interface bascule automatiquement sur
-un mode de secours (voir `src/lib/backend.js`) et le lien « charger le document
-d'exemple » permet de parcourir les deux flux de bout en bout.
+Sans Rust, `npm run dev` fonctionne et lit déjà les vrais documents :
+l'extraction est écrite en JavaScript et tourne à l'identique dans la webview
+et dans un navigateur. Seule l'écriture du document de sortie dans son format
+d'origine demande le code natif.
 
 ## Organisation
 
@@ -59,7 +61,7 @@ src/
   components/
     anonymizer-app.jsx     assemblage de la fenêtre
     mode-sidebar.jsx       colonne de gauche : marque, modes, mention locale
-    top-bar.jsx            nom du fichier, bascule source/résultat, fermeture
+    top-bar.jsx            bascule source/résultat, fermeture
     drop-stage.jsx         écran de dépôt
     document-view.jsx      rendu tokenisé et sélection des termes
     term-panel.jsx         liste des correspondances
@@ -67,8 +69,9 @@ src/
   lib/
     tokenize.js            découpage, occurrences, substitution
     detect.js              pré-détection par regex, typage heuristique
-    types.js               les 9 catégories et leurs couleurs
-    backend.js             appels Tauri + repli navigateur
+    types.js               les 9 catégories de données
+    extract.js             lecture PDF, DOCX, XLSX, TXT et registres
+    backend.js             fichiers, appels natifs, livrables
     sample-doc.js          exercice de démonstration
   store/use-anonymizer.js  état applicatif
 src-tauri/
@@ -81,24 +84,33 @@ L'application est plate : aucune ombre portée, sauf sur le sélecteur de mode d
 la colonne de gauche, seul élément volontairement détaché. Les zones sont
 séparées par des filets d'un pixel, pas par des cartes empilées.
 
+Les termes sélectionnés ne sont pas colorisés par catégorie : neuf couleurs dans
+un document en font un nuancier illisible. Le surlignage est uniforme, le type
+se lit dans le panneau. Le vert citron reste réservé aux actions.
+
+Toute la zone de travail accepte le glisser-déposer, à n'importe quel moment du
+flux.
+
 ## État d'avancement
 
 L'interface est complète et fonctionnelle. Le backend Rust est déclaré mais pas
 encore implémenté : `src-tauri/src/commands.rs` fige les signatures et les types
 échangés, chaque commande renvoyant pour l'instant une erreur.
 
-Restent à écrire :
+La lecture des documents et des registres est faite, en JavaScript. Restent à
+écrire, en Rust :
 
-1. **`extract_document`** — extraction du texte depuis PDF, DOCX, XLSX, TXT.
-2. **`apply_pseudonymisation`** — réécriture du document dans son format
+1. **`apply_pseudonymisation`** — réécriture du document dans son format
    d'origine. Pour le PDF, stratégie retenue : rédaction en place (effacer la
    zone du terme, redessiner le pseudonyme dans la même police, en réduisant le
    corps si le pseudonyme est plus large). Attention aux polices partiellement
    embarquées : les glyphes `[`, `]` et `_` peuvent manquer.
-3. **`write_registry` / `read_registry`** — registre Excel au format du
-   logiciel existant, pour rester interopérable avec lui. Un fichier d'exemple
-   du dossier `Registres` est nécessaire pour caler les colonnes exactes.
-4. **`reveal_in_folder`** — ouverture de l'explorateur sur le fichier produit.
+2. **`reveal_in_folder`** — ouverture de l'explorateur sur le fichier produit.
+
+Le registre est lu et écrit par SheetJS, avec des en-têtes reconnus à la
+tolérance près (casse, accents, libellés voisins) et un repli sur l'ordre des
+colonnes. Un fichier d'exemple du dossier `Registres` reste nécessaire pour
+confirmer l'interopérabilité avec le logiciel existant.
 
 ### Limite connue
 

@@ -1,4 +1,6 @@
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import { ThemeProvider } from "next-themes";
+
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -24,13 +26,23 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
+    // `suppressHydrationWarning` est requis : le theme est pose sur `<html>`
+    // avant l'hydratation, ce que le serveur ne peut pas connaitre.
     <html
       lang="fr"
-      className={`dark ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="h-full">
-        {children}
-        <Toaster position="bottom-center" />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster position="bottom-center" />
+        </ThemeProvider>
       </body>
     </html>
   );

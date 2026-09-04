@@ -32,12 +32,296 @@ function nextIndexForType(terms, type, excludeId) {
 
 export const useAnonymizer = create((set, get) => ({
   mode: "pseudo", // pseudo | depseudo
+  projects: [],
+  activeProjectId: null,
+  onboardingDone: true, // vrai jusqu'a la lecture du fichier : evite un
+  // clignotement de la visite au demarrage
+  tourContext: null, // etat fige a l'ouverture de la visite
   document: null,
   doc: [], // document tokenise
   registry: null, // { fileName, terms }
   terms: [],
   nextId: 1,
   ...initialProcess,
+
+  /* ---------------------------------------------------------------- */
+  /* Projets                                                          */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * Un projet retient les correspondances etablies : c'est ce qui permet de
+   * de-pseudonymiser plus tard sans avoir a retrouver le fichier de registre.
+   */
+
+  /**
+   * Marque la visite guidee comme vue, ou la repropose.
+   *
+   * Armer la visite fige l'etat de l'application au meme instant : elle
+   * ouvrira elle-meme un document a l'une de ses etapes, et son parcours ne
+   * doit pas se reordonner en cours de route a cause de ce qu'elle a provoque.
+   */
+  async setOnboardingDone(done) {
+    set({
+      onboardingDone: done,
+      tourContext: done
+        ? null
+        : { document: Boolean(get().document), projet: Boolean(get().activeProjectId) },
+    });
+    await get().persist();
+  },
+
+  async loadProjects() {
+    const { projects, activeId, onboardingDone } = await backend.loadProjects();
+    set({
+      projects,
+      onboardingDone,
+      tourContext: onboardingDone
+        ? null
+        : { document: Boolean(get().document), projet: Boolean(activeId) },
+    });
+    // Retrouver son projet a l'ouverture fait partie de ne rien perdre.
+    if (activeId && projects.some((p) => p.id === activeId)) {
+      get().selectProject(activeId);
+    }
+  },
+
+  /** Ecrit l'etat des projets sur le disque apres chaque modification. */
+  async persist() {
+    const { projects, activeProjectId, onboardingDone } = get();
+    try {
+      await backend.saveProjects({
+        projects,
+        activeId: activeProjectId,
+        onboardingDone,
+      });
+    } catch (err) {
+      toast.error(`Projet non enregistré : ${err.message ?? err}`);
+    }
+  },
+
+  async persistProjects(projects) {
+    set({ projects });
+    await get().persist();
+  },
+
+  async createProject(name) {
+    const label = String(name ?? "").trim();
+    if (!label) return null;
+
+    const project = {
+      id: `p${Date.now().toString(36)}`,
+      name: label,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      terms: [],
+    };
+    // Le projet devient actif avant d'etre ecrit : dans l'ordre inverse, le
+    // fichier conservait `activeId: null` jusqu'a la prochaine ecriture.
+    set({ activeProjectId: project.id });
+    await get().persistProjects([...get().projects, project]);
+    toast.success(`Projet « ${label} » créé`);
+    return project;
+  },
+
+  /**
+   * Active un projet. En de-pseudonymisation, ses correspondances tiennent
+   * lieu de registre : c'est tout l'interet de les avoir gardees.
+   */
+  selectProject(id) {
+    const project = get().projects.find((p) => p.id === id);
+    if (!project) return;
+
+    // Changer de projet repart toujours d'une page blanche. Sans cette remise
+    // a zero inconditionnelle, le document du projet precedent restait a
+    // l'ecran — et donnait a croire qu'il appartenait au dossier qu'on venait
+    // d'ouvrir.
+    set({
+      activeProjectId: id,
+      document: null,
+      doc: [],
+      registry: null,
+      terms: [],
+      nextId: 1,
+      ...initialProcess,
+    });
+    get().persist();
+
+    if (get().mode === "depseudo") {
+      // Les correspondances du projet tiennent lieu de registre : c'est tout
+      // l'interet de les avoir gardees.
+      //
+      // Le document d'origine n'est volontairement pas rouvert : en
+      // restauration, ce qu'on attend est le texte revenu du traitement
+      // exterieur, pas le fichier de depart — qui contient justement les
+      // donnees reelles.
+      if (project.terms.length) {
+        get().setRegistry({
+          fileName: `Projet « ${project.name} »`,
+          path: "",
+          terms: project.terms,
+          fromProject: project.name,
+        });
+      }
+      return;
+    }
+
+    // En pseudonymisation, rouvrir le dernier document evite de repartir de
+    // zero : sans lui, l'espace de travail reste ferme et le projet parait
+    // vide.
+    const last = project.documents?.[0];
+    if (last) get().openStoredDocument(last);
+  },
+
+  /**
+   * Verse les correspondances connues du projet actif dans la session.
+   *
+   * Un terme deja detecte automatiquement prend le pseudonyme du projet : un
+   * meme nom doit porter le meme pseudonyme d'un document a l'autre, sans quoi
+   * les registres de deux documents du meme dossier se contrediraient.
+   *
+   * Les termes du projet absents du document courant sont ignores : ils
+   * encombreraient la liste sans rien designer.
+   */
+  applyProjectTerms() {
+    const { projects, activeProjectId, doc, terms, mode } = get();
+    const project = projects.find((p) => p.id === activeProjectId);
+    if (!project?.terms.length || !doc.length) return;
+
+    const byText = new Map(terms.map((t) => [t.text.toLowerCase(), t]));
+    let id = get().nextId;
+    let added = 0;
+
+    for (const row of project.terms) {
+      const key = row.text.toLowerCase();
+      const existing = byText.get(key);
+      const hits = findOccurrences(doc, mode === "pseudo" ? row.text : row.pseudo);
+
+      if (existing) {
+        byText.set(key, { ...existing, type: row.type, pseudo: row.pseudo, hits });
+      } else if (hits.length) {
+        byText.set(key, {
+          id: id++,
+          text: row.text,
+          type: row.type,
+          pseudo: row.pseudo,
+          hits,
+        });
+        added += 1;
+      }
+    }
+
+    set({ terms: [...byText.values()], nextId: id, ...initialProcess });
+
+    if (added) {
+      toast(
+        `${added} correspondance${added > 1 ? "s" : ""} du projet « ${project.name} » retrouvée${added > 1 ? "s" : ""}`,
+      );
+    }
+  },
+
+  async deleteProject(id) {
+    const rest = get().projects.filter((p) => p.id !== id);
+    await get().persistProjects(rest);
+    if (get().activeProjectId === id) {
+      set({ activeProjectId: null });
+      await get().persist();
+    }
+  },
+
+  /**
+   * Verse les correspondances du document courant dans le projet actif.
+   *
+   * Les termes deja connus sont mis a jour plutot que dupliques : un meme nom
+   * doit garder le meme pseudonyme d'un document a l'autre, sans quoi le
+   * registre du projet deviendrait ambigu.
+   */
+  /**
+   * Verse dans le projet actif le travail du document courant : les
+   * correspondances, et le document lui-meme.
+   *
+   * Le texte extrait est conserve, pas seulement le chemin : rouvrir un projet
+   * doit rendre l'apercu meme si le fichier a ete deplace ou renomme depuis.
+   *
+   * Les termes deja connus sont mis a jour plutot que dupliques : un meme nom
+   * doit garder le meme pseudonyme d'un document a l'autre, sans quoi le
+   * registre du projet deviendrait ambigu.
+   */
+  async rememberWork() {
+    const { activeProjectId, projects, terms, document: extracted } = get();
+    if (!activeProjectId) return;
+
+    const next = projects.map((project) => {
+      if (project.id !== activeProjectId) return project;
+
+      const byText = new Map(
+        project.terms.map((t) => [t.text.toLowerCase(), t]),
+      );
+      for (const term of terms) {
+        byText.set(term.text.toLowerCase(), {
+          text: term.text,
+          type: term.type,
+          pseudo: term.pseudo,
+        });
+      }
+
+      let documents = project.documents ?? [];
+      if (extracted) {
+        const key = extracted.path || extracted.fileName;
+        documents = [
+          {
+            fileName: extracted.fileName,
+            path: extracted.path ?? "",
+            format: extracted.format,
+            title: extracted.title,
+            paragraphs: extracted.paragraphs,
+            savedAt: new Date().toISOString(),
+          },
+          ...documents.filter((d) => (d.path || d.fileName) !== key),
+          // Le fichier de projets ne doit pas croitre sans fin.
+        ].slice(0, 20);
+      }
+
+      return {
+        ...project,
+        terms: [...byText.values()],
+        documents,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    await get().persistProjects(next);
+  },
+
+  /**
+   * Reouvre un document conserve dans un projet.
+   *
+   * La detection automatique n'est volontairement pas relancee : le projet
+   * contient les correspondances que l'utilisateur a validees, et re-proposer
+   * des termes qu'il avait ecartes serait un retour en arriere.
+   */
+  openStoredDocument(stored) {
+    const doc = tokenizeDocument(stored.paragraphs);
+    set({
+      document: {
+        fileName: stored.fileName,
+        path: stored.path ?? "",
+        format: stored.format,
+        title: stored.title,
+        paragraphs: stored.paragraphs,
+      },
+      doc,
+      ...initialProcess,
+    });
+
+    const { mode, projects, activeProjectId } = get();
+    const project = projects.find((p) => p.id === activeProjectId);
+    if (mode === "depseudo" && project?.terms.length) {
+      get().applyRegistry(project.terms);
+      set({ registry: { fileName: `Projet « ${project.name} »`, path: "", terms: project.terms } });
+      return;
+    }
+    get().applyProjectTerms();
+  },
 
   /* ---------------------------------------------------------------- */
   /* Navigation                                                       */
@@ -54,6 +338,15 @@ export const useAnonymizer = create((set, get) => ({
       nextId: 1,
       ...initialProcess,
     });
+
+    // Changer d'onglet ne doit pas defaire le travail en cours : le projet
+    // actif est reapplique dans les deux sens. `selectProject` sait quoi faire
+    // de chaque mode — rouvrir le dernier document en pseudonymisation,
+    // fournir les correspondances en restauration.
+    const { activeProjectId } = get();
+    if (activeProjectId) {
+      get().selectProject(activeProjectId);
+    }
   },
 
   setView(view) {
@@ -92,6 +385,9 @@ export const useAnonymizer = create((set, get) => ({
     const { mode, registry } = get();
     if (mode === "pseudo") {
       get().runAutoDetect();
+      // Le projet actif prime sur la detection : ses pseudonymes sont ceux
+      // deja livres pour les documents precedents.
+      get().applyProjectTerms();
     } else if (registry) {
       get().applyRegistry(registry.terms);
     }
@@ -138,11 +434,41 @@ export const useAnonymizer = create((set, get) => ({
     try {
       const registry = await backend.pickRegistry();
       if (!registry) return;
-      set({ registry });
-      if (get().doc.length) get().applyRegistry(registry.terms);
+      get().setRegistry(registry);
     } catch (err) {
       toast.error(`Registre illisible : ${err.message ?? err}`);
     }
+  },
+
+  async openDroppedRegistry(file, path) {
+    try {
+      const registry = await backend.readDroppedRegistry(file, path);
+      if (registry) get().setRegistry(registry);
+    } catch (err) {
+      toast.error(`Registre illisible : ${err.message ?? err}`);
+    }
+  },
+
+  setRegistry(registry) {
+    set({ registry });
+    if (get().doc.length) get().applyRegistry(registry.terms);
+  },
+
+  /**
+   * Point d'entree du glisser-deposer sur toute la surface de la fenetre.
+   *
+   * En mode restauration, un tableur depose alors qu'aucun registre n'est
+   * charge est pris pour le registre : c'est la seule lecture raisonnable.
+   */
+  openDroppedAny(file, path) {
+    const name = path || file?.name || "";
+    const spreadsheet = /\.(xlsx|xls|csv)$/i.test(name);
+    const { mode, registry } = get();
+    if (mode === "depseudo" && spreadsheet && !registry) {
+      get().openDroppedRegistry(file, path);
+      return;
+    }
+    get().openDroppedFile(file, path);
   },
 
   /** Transforme les lignes d'un registre en correspondances positionnees. */
@@ -200,40 +526,76 @@ export const useAnonymizer = create((set, get) => ({
 
   /**
    * Cree une correspondance a partir d'une plage de tokens selectionnee dans
-   * le document. Re-selectionner un terme existant le supprime.
+   * le document. Le type vient de la barre de selection quand l'utilisateur
+   * l'a choisi ; sinon il est devine.
    */
-  addTerm(p, a, b) {
-    const { doc, terms } = get();
+  addTerm(p, a, b, type) {
+    const { doc } = get();
     const from = Math.min(a, b);
     const to = Math.max(a, b);
-    const text = phraseAt(doc, p, from, to);
-    if (!text) return;
+    return get().addTermByText(phraseAt(doc, p, from, to), type);
+  },
 
+  /**
+   * Cree une correspondance a partir d'un texte, qu'il vienne du document, du
+   * champ de recherche ou d'une saisie directe. Toutes les occurrences sont
+   * reperees, y compris celles que l'utilisateur n'a pas vues.
+   *
+   * @returns {boolean} vrai si la correspondance a ete creee
+   */
+  addTermByText(text, type) {
+    const clean = String(text ?? "").trim();
+    if (!clean) return false;
+
+    const { doc, terms } = get();
     const existing = terms.find(
-      (t) => t.text.toLowerCase() === text.toLowerCase(),
+      (t) => t.text.toLowerCase() === clean.toLowerCase(),
     );
     if (existing) {
-      get().removeTerm(existing.id);
-      return;
+      toast(`« ${existing.text} » figure déjà dans les correspondances`);
+      return false;
     }
 
-    const type = guessType(text);
+    const kind = type ?? guessType(clean);
     const term = {
       id: get().nextId,
-      text,
-      type,
-      pseudo: buildPseudo(type, nextIndexForType(terms, type)),
-      hits: findOccurrences(doc, text),
+      text: clean,
+      type: kind,
+      pseudo: buildPseudo(kind, nextIndexForType(terms, kind)),
+      hits: findOccurrences(doc, clean),
     };
     set((s) => ({
       terms: [...s.terms, term],
       nextId: s.nextId + 1,
       ...initialProcess,
     }));
+    return true;
   },
 
   removeTerm(id) {
+    const term = get().terms.find((t) => t.id === id);
     set((s) => ({ terms: s.terms.filter((t) => t.id !== id) }));
+    // Sans cet oubli, le terme revient des que le projet est rouvert : il
+    // n'aurait ete retire que de la session.
+    if (term) get().forgetTerm(term.text);
+  },
+
+  /** Retire durablement un terme du projet actif. */
+  async forgetTerm(text) {
+    const { activeProjectId, projects } = get();
+    if (!activeProjectId) return;
+
+    const cle = String(text).toLowerCase();
+    let modifie = false;
+    const next = projects.map((project) => {
+      if (project.id !== activeProjectId) return project;
+      const restants = project.terms.filter((t) => t.text.toLowerCase() !== cle);
+      if (restants.length === project.terms.length) return project;
+      modifie = true;
+      return { ...project, terms: restants, updatedAt: new Date().toISOString() };
+    });
+
+    if (modifie) await get().persistProjects(next);
   },
 
   setTermType(id, type) {
@@ -291,6 +653,7 @@ export const useAnonymizer = create((set, get) => ({
       });
       clearInterval(timer);
       set({ status: "done", progress: 100, view: "result", deliverables });
+      if (mode === "pseudo") get().rememberWork();
       toast.success(
         mode === "pseudo"
           ? "Document pseudonymisé — registre généré"

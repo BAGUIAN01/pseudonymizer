@@ -4,14 +4,13 @@ import { cn } from "@/lib/utils";
 import { useAnonymizer } from "@/store/use-anonymizer";
 
 /**
- * Bandeau du document ouvert : son nom a gauche, la bascule entre le document
- * source et le resultat centree, la fermeture a droite.
+ * Bandeau du document ouvert : la bascule entre le document source et le
+ * resultat, centree, et la fermeture a droite.
  *
- * La grille en trois colonnes garde la bascule centree sur la fenetre, quelle
- * que soit la longueur du nom de fichier.
+ * Le nom du fichier n'y figure pas : un nom long deformait la mise en page, et
+ * l'utilisateur sait quel document il vient d'ouvrir.
  */
 export function TopBar() {
-  const fileName = useAnonymizer((s) => s.document?.fileName);
   const mode = useAnonymizer((s) => s.mode);
   const view = useAnonymizer((s) => s.view);
   const status = useAnonymizer((s) => s.status);
@@ -23,14 +22,9 @@ export function TopBar() {
 
   return (
     <header className="grid h-14 flex-none grid-cols-[1fr_auto_1fr] items-center gap-4 border-b px-5">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <span className="bg-primary size-1.5 flex-none rounded-full" />
-        <span className="truncate text-[12.5px] text-[#C7CCD3]">
-          {fileName}
-        </span>
-      </div>
+      <span />
 
-      <div className="flex gap-0.5 rounded-lg bg-white/5 p-0.5">
+      <div className="flex gap-0.5 rounded-lg bg-tint/5 p-0.5" data-tour="apercu">
         <SegmentButton active={!resultView} onClick={() => setView("source")}>
           Document
         </SegmentButton>
@@ -43,7 +37,7 @@ export function TopBar() {
         <button
           type="button"
           onClick={reset}
-          className="hover:text-destructive cursor-pointer text-[12.5px] font-semibold text-[#98A1AC] transition-colors"
+          className="hover:border-destructive/50 hover:text-destructive cursor-pointer rounded-lg border bg-tint/5 px-3 py-1.5 text-[12px] font-bold text-foreground transition-colors hover:bg-tint/10"
         >
           Fermer le document
         </button>
@@ -58,10 +52,10 @@ function SegmentButton({ active, onClick, children }) {
       type="button"
       onClick={onClick}
       className={cn(
-        "cursor-pointer rounded-[7px] px-[13px] py-1.5 text-xs font-semibold transition-colors",
+        "cursor-pointer rounded-[7px] px-[13px] py-1.5 text-xs font-bold transition-colors",
         active
           ? "bg-primary text-primary-foreground"
-          : "text-muted-foreground bg-transparent hover:text-[#C7CCD3]",
+          : "bg-transparent text-strong hover:bg-tint/6",
       )}
     >
       {children}

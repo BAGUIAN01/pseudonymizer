@@ -1,4 +1,5 @@
 mod commands;
+mod rewrite;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -6,6 +7,8 @@ pub fn run() {
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_opener::init())
+    .plugin(tauri_plugin_process::init())
+    .plugin(tauri_plugin_updater::Builder::new().build())
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
@@ -17,11 +20,11 @@ pub fn run() {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
-      commands::extract_document,
       commands::apply_pseudonymisation,
-      commands::write_registry,
-      commands::read_registry,
-      commands::reveal_in_folder,
+      commands::write_beside,
+      commands::copy_to_dir,
+      commands::projects_load,
+      commands::projects_save,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

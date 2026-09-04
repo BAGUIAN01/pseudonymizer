@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.1.0"
+version = "0.1.4"
 description = "Anonymizer — Filtre IA : pseudonymisation locale de documents"
 authors = ["Filtre IA"]
 license = ""
@@ -13,14 +13,37 @@ name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.6.3" }
+tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.11.3" }
+tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-opener = "2"
+
+# Lecture et reecriture des conteneurs OOXML (.docx, .xlsx), qui sont des zip.
+zip = { version = "2", default-features = false, features = ["deflate"] }
+lopdf = "0.36.0"
+
+# `tinyvec` arrive par lopdf (stringprep -> unicode-normalization). Sa version
+# 1.13 ne compile pas avec rustc 1.98 : `use alloc::vec` y masque la macro
+# `vec!`. Le pin est declare ici, et pas seulement dans Cargo.lock, pour qu'un
+# `cargo update` ne le defasse pas silencieusement.
+tinyvec = "=1.8.1"
+tauri-plugin-updater = "2.11.0"
+tauri-plugin-process = "2.3.1"
+
+# Profil de publication regle pour la taille du binaire, pas pour la vitesse de
+# compilation : l'application manipule des documents, elle ne calcule rien de
+# lourd. `opt-level = "s"` plutot que "z" — "z" desactive la vectorisation et
+# penalise la reecriture des gros PDF sans gagner grand-chose.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

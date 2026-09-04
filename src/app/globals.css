@@ -6,6 +6,15 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-strong: var(--text-strong);
+  --color-dim: var(--text-dim);
+  --color-faint: var(--text-faint);
+  --color-surface: var(--surface);
+  /* Teinte des voiles : blanche sur fond sombre, noire sur fond clair. */
+  --color-tint: var(--tint);
+  /* Le vert de marque en aplat est illisible en texte sur fond clair :
+     `accent-strong` porte la variante lisible de chaque theme. */
+  --color-accent-strong: var(--accent-strong);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-space-grotesk);
   --font-mono: var(--font-jetbrains-mono);
@@ -50,18 +59,83 @@
 }
 
 /*
-  L'application est mono-theme (sombre) et entierement plate : aucune ombre
-  portee hors du selecteur de mode. Les deux blocs sont identiques pour que
-  les composants shadcn restent corrects meme sans la classe `.dark`.
+  Deux themes. Le sombre reste celui par defaut ; le clair existe pour les
+  postes ou l'ecran est lu en plein jour.
+
+  Les composants ne connaissent que les roles — `strong`, `dim`, `faint`,
+  `surface`, `tint` — jamais les valeurs. C'est ce qui evite que les deux
+  themes divergent des la premiere retouche.
 */
-:root,
+:root {
+  --background: #f7f8fa;
+  --foreground: #0a0c10;
+
+  --text-strong: #000000;
+  --text-dim: #3c444e;
+  --text-faint: #6b737d;
+  --accent-strong: #2f5709;
+
+  --shadow-panel: 0 8px 20px rgba(16, 24, 40, 0.1);
+  --shadow-float: 0 16px 40px rgba(16, 24, 40, 0.16);
+  --shadow-dialog: 0 24px 60px rgba(16, 24, 40, 0.22);
+  --surface: #ffffff;
+  --tint: #0b0d11;
+
+  --card: rgba(0, 0, 0, 0.03);
+  --card-foreground: #0a0c10;
+  --popover: #ffffff;
+  --popover-foreground: #0a0c10;
+
+  --primary: #cbff4d;
+  --primary-foreground: #0b0d11;
+  --secondary: rgba(0, 0, 0, 0.05);
+  --secondary-foreground: #14171c;
+
+  --muted: rgba(0, 0, 0, 0.04);
+  --muted-foreground: #3c444e;
+  --accent: rgba(203, 255, 77, 0.22);
+  --accent-foreground: #2f3d09;
+
+  --destructive: #c0322f;
+
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.12);
+  --ring: rgba(0, 0, 0, 0.28);
+
+  --chart-1: #7bbf1f;
+  --chart-2: #1f9bbf;
+  --chart-3: #7a4fd6;
+  --chart-4: #c07a15;
+  --chart-5: #2e9e63;
+
+  --sidebar: transparent;
+  --sidebar-foreground: #3c444e;
+  --sidebar-primary: #cbff4d;
+  --sidebar-primary-foreground: #0b0d11;
+  --sidebar-accent: rgba(203, 255, 77, 0.22);
+  --sidebar-accent-foreground: #2f3d09;
+  --sidebar-border: rgba(0, 0, 0, 0.1);
+  --sidebar-ring: rgba(0, 0, 0, 0.28);
+}
+
 .dark {
-  --background: #07080a;
+  --background: #111419;
   --foreground: #e8eaed;
+
+  --text-strong: #f1f3f5;
+  --text-dim: #98a1ac;
+  --text-faint: #6b747e;
+  --accent-strong: #cbff4d;
+
+  --shadow-panel: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --shadow-float: 0 24px 60px rgba(0, 0, 0, 0.65);
+  --shadow-dialog: 0 30px 80px rgba(0, 0, 0, 0.7);
+  --surface: #1a1e25;
+  --tint: #ffffff;
 
   --card: rgba(255, 255, 255, 0.04);
   --card-foreground: #e8eaed;
-  --popover: #12151a;
+  --popover: #1a1e25;
   --popover-foreground: #e8eaed;
 
   --primary: #cbff4d;
@@ -78,15 +152,13 @@
 
   --border: rgba(255, 255, 255, 0.09);
   --input: rgba(255, 255, 255, 0.09);
-  --ring: rgba(203, 255, 77, 0.45);
+  --ring: rgba(255, 255, 255, 0.28);
 
   --chart-1: #cbff4d;
   --chart-2: #6ee7ff;
   --chart-3: #c4a6ff;
   --chart-4: #ffc46e;
   --chart-5: #8fe3b0;
-
-  --radius: 0.75rem;
 
   --sidebar: transparent;
   --sidebar-foreground: #8a9199;
@@ -95,7 +167,12 @@
   --sidebar-accent: rgba(203, 255, 77, 0.14);
   --sidebar-accent-foreground: #e9ffb8;
   --sidebar-border: rgba(255, 255, 255, 0.09);
-  --sidebar-ring: rgba(203, 255, 77, 0.45);
+  --sidebar-ring: rgba(255, 255, 255, 0.28);
+}
+
+:root,
+.dark {
+  --radius: 0.75rem;
 }
 
 @layer base {
@@ -104,24 +181,15 @@
   }
   html {
     @apply font-sans;
-    color-scheme: dark;
+    color-scheme: light;
     height: 100%;
+  }
+  html.dark {
+    color-scheme: dark;
   }
   body {
     @apply bg-background text-foreground;
     height: 100%;
-    background:
-      radial-gradient(1100px 560px at 50% -12%, #17201b 0%, #07080a 60%),
-      #07080a;
-    background-attachment: fixed;
-  }
-}
-
-@layer utilities {
-  /* Empeche la selection native de texte de parasiter la selection de termes */
-  .select-none-doc {
-    user-select: none;
-    -webkit-user-select: none;
   }
 }
 
@@ -166,4 +234,51 @@
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+/*
+  Surlignage d'une correspondance. La teinte vient de la famille du type et
+  est posee en variable par le rendu du document (`--mark`), ce qui evite de
+  generer une classe par categorie.
+
+  Elle ne touche que le fond, tres faible, et le filet de soulignement : le
+  texte garde sa couleur de lecture, sans quoi un document dense deviendrait
+  un nuancier.
+*/
+.term-mark {
+  /* Sur fond clair, les teintes de famille sont pastel : il leur faut plus de
+     fond et un filet assombri pour rester lisibles. */
+  background-color: rgb(var(--mark) / 0.32);
+  text-decoration-color: color-mix(in srgb, rgb(var(--mark)), #000 45%);
+}
+
+.term-mark:hover {
+  background-color: rgb(var(--mark) / 0.5);
+}
+
+/* Pseudonyme dans l'apercu du resultat : meme teinte, sans soulignement. */
+.term-pseudo {
+  background-color: rgb(var(--mark) / 0.36);
+}
+
+/* Pastille de famille, dans le panneau et la barre de selection. */
+.term-dot {
+  background-color: color-mix(in srgb, rgb(var(--mark)), #000 35%);
+}
+
+.dark .term-mark {
+  background-color: rgb(var(--mark) / 0.11);
+  text-decoration-color: rgb(var(--mark) / 0.75);
+}
+
+.dark .term-mark:hover {
+  background-color: rgb(var(--mark) / 0.2);
+}
+
+.dark .term-pseudo {
+  background-color: rgb(var(--mark) / 0.14);
+}
+
+.dark .term-dot {
+  background-color: rgb(var(--mark) / 0.9);
 }

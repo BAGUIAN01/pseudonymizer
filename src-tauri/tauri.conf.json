@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Anonymizer",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "identifier": "sn.filtreia.anonymizer",
   "build": {
     "frontendDist": "../out",
@@ -21,7 +21,8 @@
         "fullscreen": false,
         "center": true,
         "theme": "Dark",
-        "backgroundColor": "#07080A"
+        "backgroundColor": "#111419",
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-http-cache"
       }
     ],
     "security": {
@@ -40,6 +41,31 @@
     ],
     "android": {
       "debugApplicationIdSuffix": ".debug"
+    },
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "headerImage": "installer/nsis-header.bmp",
+        "uninstallerHeaderImage": "installer/nsis-header.bmp",
+        "sidebarImage": "installer/nsis-sidebar.bmp"
+      },
+      "wix": {
+        "bannerPath": "installer/wix-banner.bmp",
+        "dialogImagePath": "installer/wix-dialog.bmp"
+      }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ1N0IwRjFFNDlBNjg5OTkKUldTWmlhWkpIZzk3UmE2bk5vNG9Ld3BFdVN1QjFVdVZTdnhHSlF6WWdoSVpGNXgwQmJwMjdvQncK",
+      "endpoints": [
+        "https://pub-e1f8800f2c824052968b58bc73d55195.r2.dev/updates/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

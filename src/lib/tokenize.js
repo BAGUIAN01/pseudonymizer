@@ -146,3 +146,104 @@ export function applyTerms(doc, terms, { reverse = false } = {}) {
     return out;
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* Entites                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Separateurs admis a l'interieur d'une entite : une entite se lit d'un trait,
+ * donc tout signe fort (point, virgule, retour) la termine.
+ */
+const ENTITY_GAP_RE = /^[ \u00A0'\u2019-]*$/;
+const ENTITY_CAP_RE = /^[A-ZÀ-ÖØ-Þ]/;
+
+/** Ces mots traversent une entite sans jamais l'ouvrir ni la fermer. */
+const ENTITY_PARTICLES = new Set([
+  "de", "du", "des", "d", "le", "la", "les", "van", "von", "der", "den",
+  "el", "al", "bin", "ben", "da", "dos",
+]);
+
+/**
+ * Mots capitalises par leur seule position en tete de phrase, ou titres de
+ * civilite : ils ne font jamais partie de l'entite voisine. Sans cette liste,
+ * un double-clic sur « Marie » dans « Ensuite Marie a signe » capturerait
+ * « Ensuite Marie ».
+ *
+ * Les particules `de`, `du`, `des`, `d` en sont volontairement absentes : elles
+ * doivent rester traversables au milieu d'une raison sociale.
+ */
+const ENTITY_STOP = new Set([
+  "ensuite", "puis", "enfin", "cependant", "toutefois", "ainsi", "donc", "or",
+  "mais", "car", "ce", "cet", "cette", "ces", "il", "elle", "ils", "elles",
+  "nous", "vous", "je", "tu", "on", "son", "sa", "ses", "leur", "leurs",
+  "notre", "nos", "votre", "vos", "au", "aux", "dans", "pour", "par", "sur",
+  "sous", "avec", "sans", "avant", "après", "apres", "depuis", "lorsque",
+  "quand", "si", "comme", "tout", "tous", "toute", "toutes", "chaque",
+  "aucun", "plusieurs", "certains", "un", "une", "ledit", "ladite",
+  "monsieur", "madame", "mademoiselle", "docteur", "maitre", "maître",
+]);
+
+function isStopWord(token) {
+  return token.word && ENTITY_STOP.has(token.text.toLowerCase());
+}
+
+function isCapitalised(token) {
+  return token.word && ENTITY_CAP_RE.test(token.text);
+}
+
+function isParticle(token) {
+  return token.word && ENTITY_PARTICLES.has(token.text.toLowerCase());
+}
+
+/**
+ * Index du mot voisin dans la direction `step`, ou -1 si ce qui les separe
+ * n'appartient pas a une entite.
+ */
+function neighbourWord(tokens, i, step) {
+  let gap = "";
+  for (let k = i + step; k >= 0 && k < tokens.length; k += step) {
+    if (tokens[k].word) return ENTITY_GAP_RE.test(gap) ? k : -1;
+    gap += tokens[k].text;
+  }
+  return -1;
+}
+
+/**
+ * Etend la position d'un mot a l'entite qui l'entoure : les mots capitalises
+ * adjacents sont pris ensemble, de sorte qu'un double-clic sur « Jean »
+ * capture « Jean Dupont », et « Societe Generale de Banques » d'un bloc.
+ *
+ * Un mot en minuscules n'etend rien : il n'y a aucune raison de deviner une
+ * entite autour de lui.
+ *
+ * @returns {{p: number, from: number, to: number}|null}
+ */
+export function entityRangeAt(doc, p, i) {
+  const tokens = doc[p];
+  if (!tokens?.[i]?.word) return null;
+
+  let from = i;
+  let to = i;
+
+  if (isCapitalised(tokens[i])) {
+    for (;;) {
+      const k = neighbourWord(tokens, from, -1);
+      if (k < 0 || isStopWord(tokens[k])) break;
+      if (!isCapitalised(tokens[k]) && !isParticle(tokens[k])) break;
+      from = k;
+    }
+    for (;;) {
+      const k = neighbourWord(tokens, to, 1);
+      if (k < 0 || isStopWord(tokens[k])) break;
+      if (!isCapitalised(tokens[k]) && !isParticle(tokens[k])) break;
+      to = k;
+    }
+  }
+
+  // Une particule capturee en bout de plage n'appartient pas a l'entite.
+  while (from < to && isParticle(tokens[from])) from = neighbourWord(tokens, from, 1);
+  while (to > from && isParticle(tokens[to])) to = neighbourWord(tokens, to, -1);
+
+  return { p, from, to };
+}

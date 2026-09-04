@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 import { cn } from "@/lib/utils";
-import { useIsTauri } from "@/hooks/use-is-tauri";
 import { useAnonymizer } from "@/store/use-anonymizer";
 
 /**
@@ -16,30 +15,36 @@ export function DropStage() {
   const openDocument = useAnonymizer((s) => s.openDocument);
   const openDroppedFile = useAnonymizer((s) => s.openDroppedFile);
   const openRegistry = useAnonymizer((s) => s.openRegistry);
+  const openDroppedRegistry = useAnonymizer((s) => s.openDroppedRegistry);
   const loadSample = useAnonymizer((s) => s.loadSample);
-  const tauri = useIsTauri();
+  const setOnboardingDone = useAnonymizer((s) => s.setOnboardingDone);
 
   const pseudo = mode === "pseudo";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 overflow-auto p-10">
       <header className="flex flex-col items-center gap-2.5 text-center">
-        <p className="text-primary font-mono text-[10px] tracking-[0.2em] uppercase">
+        <p className="text-accent-strong font-mono text-[10px] tracking-[0.2em] uppercase">
           {pseudo ? "Étape 01 — Document source" : "Étape 01 — Restauration"}
         </p>
         <h1 className="text-[30px] font-bold tracking-[-0.035em]">
           {pseudo
             ? "Déposez le document à pseudonymiser"
-            : "Déposez le document pseudonymisé"}
+            : "Déposez le document à restaurer"}
         </h1>
         <p className="text-muted-foreground max-w-[460px] text-[13.5px] leading-[1.6]">
           {pseudo
             ? "Tout se passe en local. Les données structurées sont pré-détectées ; vous complétez ensuite vous-même la sélection des mots à remplacer."
-            : "Ajoutez également le fichier Excel de correspondance généré lors de la pseudonymisation."}
+            : "Le texte revenu de votre traitement : ses pseudonymes seront remplacés par les valeurs d’origine. Le document n’a pas besoin d’être identique à celui de départ."}
         </p>
+        {!pseudo && registry?.fromProject && (
+          <p className="text-accent-strong font-mono text-[10.5px] tracking-[0.1em]">
+            Correspondances fournies par le projet « {registry.fromProject} »
+          </p>
+        )}
       </header>
 
-      <div className="flex w-full max-w-[860px] justify-center gap-4">
+      <div className="flex w-full flex-1 gap-4" data-tour="depot">
         <DropZone
           accent
           onActivate={openDocument}
@@ -51,33 +56,57 @@ export function DropStage() {
 
         {!pseudo && (
           <DropZone
+            compacte
             onActivate={openRegistry}
-            onFile={openRegistry}
+            onFile={(file) => openDroppedRegistry(file)}
             title="Registre de correspondance"
-            hint={registry?.fileName ?? "Requis pour restaurer"}
+            hint={
+              registry?.fromProject
+                ? "Déjà chargé — déposez-en un autre pour le remplacer"
+                : (registry?.fileName ?? "Requis pour restaurer")
+            }
             action="ou parcourir les fichiers"
           />
         )}
       </div>
 
       {/*
-        Hors Tauri, l'extraction native n'est pas disponible : l'exercice de
-        demonstration permet de parcourir les deux flux de bout en bout.
+        Document d'exercice, sans passer par un fichier. Il sert de bac a
+        sable, et c'est sur lui que s'appuie la visite guidee du premier
+        lancement : sans document ouvert, les trois quarts de l'application
+        n'existent pas a l'ecran et ne peuvent donc pas etre montres.
       */}
-      {!tauri && (
+      <div className="flex items-center gap-4">
         <button
           type="button"
           onClick={loadSample}
-          className="text-muted-foreground cursor-pointer font-mono text-[10.5px] tracking-[0.1em] uppercase transition-colors hover:text-[#C7CCD3]"
+          className="text-muted-foreground cursor-pointer font-mono text-[10.5px] tracking-[0.1em] uppercase transition-colors hover:text-foreground"
         >
           ou charger le document d&apos;exemple
         </button>
-      )}
+
+        <span className="text-faint" aria-hidden>
+          ·
+        </span>
+
+        {/*
+          Le guide se rejoue depuis l'ecran d'accueil : c'est la que se trouve
+          celui qui vient de passer la visite, et non dans le dialogue des
+          projets ou il etait seul a figurer.
+        */}
+        <button
+          type="button"
+          onClick={() => setOnboardingDone(false)}
+          className="text-muted-foreground cursor-pointer font-mono text-[10.5px] tracking-[0.1em] uppercase transition-colors hover:text-foreground"
+        >
+          revoir le guide
+        </button>
+      </div>
     </div>
   );
 }
 
-function DropZone({ accent, onActivate, onFile, title, hint, action }) {
+function DropZone({ accent, compacte, onActivate, onFile, title, hint, action }) {
   const [dragging, setDragging] = useState(false);
 
   return (
@@ -96,32 +125,33 @@ function DropZone({ accent, onActivate, onFile, title, hint, action }) {
         if (file) onFile(file);
       }}
       className={cn(
-        "flex min-h-[200px] max-w-[420px] flex-1 cursor-pointer flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed p-8 text-center transition-colors",
+        "flex min-h-[200px] cursor-pointer flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed p-8 text-center transition-colors",
+        compacte ? "w-[320px] flex-none" : "flex-1",
         accent
           ? dragging
-            ? "border-primary/70 bg-primary/8"
-            : "border-primary/30 hover:border-primary/50 hover:bg-primary/4"
+            ? "border-accent-strong/80 bg-primary/10"
+            : "border-accent-strong/45 hover:border-accent-strong/70 hover:bg-primary/5"
           : dragging
-            ? "border-white/30 bg-white/5"
-            : "border-white/15 hover:border-white/30 hover:bg-white/2",
+            ? "border-tint/55 bg-tint/8"
+            : "border-tint/28 hover:border-tint/45 hover:bg-tint/4",
       )}
     >
       <span
         className={cn(
           "mb-1 size-3.5 -translate-y-px rotate-[-45deg] border-b-2 border-l-2",
-          accent ? "border-primary" : "border-white/40",
+          accent ? "border-accent-strong" : "border-tint/55",
         )}
         aria-hidden
       />
       <span className="text-[15px] font-semibold">{title}</span>
-      <span className="font-mono text-[10.5px] tracking-[0.1em] text-[#6B747E] uppercase">
+      <span className="font-mono text-[10.5px] tracking-[0.1em] text-faint uppercase">
         {hint}
       </span>
       {action && (
         <span
           className={cn(
             "mt-1 text-[12.5px] font-semibold",
-            accent ? "text-primary" : "text-[#98A1AC]",
+            accent ? "text-accent-strong" : "text-dim",
           )}
         >
           {action}

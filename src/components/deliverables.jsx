@@ -1,22 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import { toast } from "sonner";
 
 import {
   downloadBlob,
+  downloadToFolder,
   isTauri,
-  registryToCsv,
-  revealInFolder,
+  saveRegistry,
 } from "@/lib/backend";
-import { useIsTauri } from "@/hooks/use-is-tauri";
 import { useAnonymizer } from "@/store/use-anonymizer";
 
 /**
  * Recuperation des fichiers produits.
  *
- * Sous Tauri les fichiers sont deja ecrits sur le disque : les boutons ouvrent
- * l'explorateur, comme le fait le logiciel existant. Dans un navigateur, ils
- * declenchent un telechargement du texte et du registre.
+ * Une seule action : tout telecharger. Sous Tauri les livrables existent deja
+ * a cote du document source, et telecharger revient a en deposer une copie
+ * dans un dossier choisi — un seul choix pour l'ensemble, plutot qu'une boite
+ * de dialogue par fichier.
  */
 export function Deliverables() {
   const mode = useAnonymizer((s) => s.mode);
@@ -25,69 +26,80 @@ export function Deliverables() {
   const title = useAnonymizer((s) => s.document?.title);
   const deliverables = useAnonymizer((s) => s.deliverables);
   const resultParagraphs = useAnonymizer((s) => s.resultParagraphs);
-  const tauri = useIsTauri();
+
+  const [busy, setBusy] = useState(false);
 
   const pseudo = mode === "pseudo";
+  const count = pseudo ? 2 : 1;
 
-  function saveDocument() {
-    if (isTauri() && deliverables?.documentPath) {
-      revealInFolder(deliverables.documentPath);
-      return;
-    }
-    const base = (fileName ?? "document").replace(/\.[^.]+$/, "");
-    const name = base + (pseudo ? "_pseudonymise.txt" : "_restaure.txt");
-    const body = `${title ?? base}\n\n${resultParagraphs().join("\n\n")}`;
-    // Le BOM garantit l'ouverture correcte des accents sous Windows.
-    downloadBlob(name, `﻿${body}`, "text/plain;charset=utf-8");
-    toast("Document téléchargé");
-  }
+  /** Livrables ecrits sur le disque par le natif, quand il y en a. */
+  const written = [deliverables?.documentPath, deliverables?.registryPath].filter(
+    Boolean,
+  );
 
-  function saveRegistry() {
-    if (isTauri() && deliverables?.registryPath) {
-      revealInFolder(deliverables.registryPath);
-      return;
+  async function download() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (isTauri() && written.length) {
+        const saved = await downloadToFolder(written);
+        // `null` signale une annulation : rien a dire dans ce cas.
+        if (saved) {
+          toast.success(
+            saved.length > 1
+              ? `${saved.length} fichiers téléchargés`
+              : "Fichier téléchargé",
+          );
+        }
+        return;
+      }
+
+      // Hors Tauri, rien n'a ete ecrit sur le disque : le resultat est
+      // reconstruit ici, a partir du texte calcule cote client.
+      const base = (fileName ?? "document").replace(/\.[^.]+$/, "");
+      const name = base + (pseudo ? "_pseudonymise.txt" : "_restaure.txt");
+      const body = `${title ?? base}\n\n${resultParagraphs().join("\n\n")}`;
+      // Le BOM garantit l'ouverture correcte des accents sous Windows.
+      downloadBlob(name, `﻿${body}`, "text/plain;charset=utf-8");
+      if (pseudo) await saveRegistry(terms);
+      toast.success(pseudo ? "2 fichiers téléchargés" : "Fichier téléchargé");
+    } catch (err) {
+      toast.error(`Téléchargement impossible : ${err.message ?? err}`);
+    } finally {
+      setBusy(false);
     }
-    downloadBlob(
-      "Registre_correspondances.csv",
-      `﻿${registryToCsv(terms)}`,
-      "text/csv;charset=utf-8",
-    );
-    toast("Registre téléchargé");
   }
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2.5">
-        <span className="text-primary font-mono text-[10px] tracking-[0.14em] uppercase">
+        <span className="text-accent-strong font-mono text-[10px] tracking-[0.14em] uppercase">
           Livrables prêts
         </span>
         <span className="text-muted-foreground font-mono text-[10px]">
-          {pseudo ? "2 fichiers" : "1 fichier"}
+          {count === 2 ? "2 fichiers" : "1 fichier"}
         </span>
       </div>
 
-      <div className={pseudo ? "grid grid-cols-2 gap-2" : "grid gap-2"}>
-        <SecondaryButton onClick={saveDocument}>
-          {tauri ? "Ouvrir le document" : "Document"}
-        </SecondaryButton>
-        {pseudo && (
-          <SecondaryButton onClick={saveRegistry}>
-            {tauri ? "Ouvrir le registre" : "Registre .csv"}
-          </SecondaryButton>
-        )}
-      </div>
-    </div>
-  );
-}
+      <button
+        type="button"
+        onClick={download}
+        disabled={busy}
+        className="cursor-pointer rounded-md bg-tint/8 px-2 py-2.5 text-[11.5px] font-semibold text-foreground transition-colors hover:bg-tint/14 disabled:cursor-wait disabled:opacity-60"
+      >
+        {busy
+          ? "Téléchargement…"
+          : count === 2
+            ? "Tout télécharger"
+            : "Télécharger le document"}
+      </button>
 
-function SecondaryButton({ onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="cursor-pointer rounded-md bg-white/5 px-2 py-2.5 text-[11.5px] font-semibold text-[#C7CCD3] transition-colors hover:bg-white/10"
-    >
-      {children}
-    </button>
+      {pseudo && (
+        <p className="text-muted-foreground text-[10.5px] leading-[1.5]">
+          Le document pseudonymisé et son registre de correspondances. Le
+          registre est indispensable pour restaurer le document plus tard.
+        </p>
+      )}
+    </div>
   );
 }
