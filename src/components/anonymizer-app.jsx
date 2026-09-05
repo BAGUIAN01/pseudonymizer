@@ -25,7 +25,6 @@ const Tour = dynamic(() => import("@/components/tour").then((m) => m.Tour), {
  * du flux : deposer un fichier remplace le document ouvert.
  */
 export function AnonymizerApp() {
-  const hasFile = useAnonymizer((s) => Boolean(s.document));
   const isReady = useAnonymizer((s) => s.isReady());
   const openDroppedAny = useAnonymizer((s) => s.openDroppedAny);
 
@@ -54,7 +53,7 @@ export function AnonymizerApp() {
         <ModeSidebar />
 
         <div
-          className="relative flex min-w-0 flex-1 flex-col border-l"
+          className="bg-paper relative flex min-w-0 flex-1 flex-col border-l"
           onDragEnter={(e) => {
             if (!carriesFiles(e)) return;
             depth.current += 1;
@@ -76,7 +75,7 @@ export function AnonymizerApp() {
             if (file) openDroppedAny(file);
           }}
         >
-          {hasFile && <TopBar />}
+          {isReady && <TopBar />}
 
           {isReady ? (
             <div className="flex min-h-0 flex-1">

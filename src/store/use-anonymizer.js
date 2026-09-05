@@ -34,6 +34,7 @@ export const useAnonymizer = create((set, get) => ({
   mode: "pseudo", // pseudo | depseudo
   projects: [],
   activeProjectId: null,
+  confirmed: false, // l'espace de travail ne s'ouvre qu'apres validation
   onboardingDone: true, // vrai jusqu'a la lecture du fichier : evite un
   // clignotement de la visite au demarrage
   tourContext: null, // etat fige a l'ouverture de la visite
@@ -142,6 +143,7 @@ export const useAnonymizer = create((set, get) => ({
       registry: null,
       terms: [],
       nextId: 1,
+      confirmed: false,
       ...initialProcess,
     });
     get().persist();
@@ -310,6 +312,7 @@ export const useAnonymizer = create((set, get) => ({
         paragraphs: stored.paragraphs,
       },
       doc,
+      confirmed: true,
       ...initialProcess,
     });
 
@@ -336,6 +339,7 @@ export const useAnonymizer = create((set, get) => ({
       registry: null,
       terms: [],
       nextId: 1,
+      confirmed: false,
       ...initialProcess,
     });
 
@@ -347,6 +351,12 @@ export const useAnonymizer = create((set, get) => ({
     if (activeProjectId) {
       get().selectProject(activeProjectId);
     }
+  },
+
+  /** Ouvre l'espace de travail sur ce qui vient d'etre depose. */
+  confirmStage() {
+    if (!get().document) return;
+    set({ confirmed: true });
   },
 
   setView(view) {
@@ -364,6 +374,7 @@ export const useAnonymizer = create((set, get) => ({
       registry: null,
       terms: [],
       nextId: 1,
+      confirmed: false,
       ...initialProcess,
     });
   },
@@ -380,7 +391,7 @@ export const useAnonymizer = create((set, get) => ({
   setDocument(extracted) {
     if (!extracted) return;
     const doc = tokenizeDocument(extracted.paragraphs);
-    set({ document: extracted, doc, ...initialProcess });
+    set({ document: extracted, doc, confirmed: false, ...initialProcess });
 
     const { mode, registry } = get();
     if (mode === "pseudo") {
@@ -425,9 +436,11 @@ export const useAnonymizer = create((set, get) => ({
         },
       });
       get().setDocument({ ...SAMPLE_PSEUDONYMISED_DOCUMENT });
+      set({ confirmed: true });
       return;
     }
     get().setDocument({ ...SAMPLE_DOCUMENT });
+    set({ confirmed: true });
   },
 
   async openRegistry() {
@@ -485,6 +498,29 @@ export const useAnonymizer = create((set, get) => ({
       hits: findOccurrences(doc, mode === "pseudo" ? row.text : row.pseudo),
     }));
     set({ terms, nextId: id, ...initialProcess });
+
+    // Un registre peut couvrir plusieurs documents, ou avoir ete saisi avec
+    // des graphies differentes : une correspondance introuvable n'est pas une
+    // erreur, mais elle doit se voir. Sans cela, l'utilisateur croit tout
+    // traiter alors qu'une partie passe a travers.
+    const trouves = terms.filter((t) => t.hits.length).length;
+    const absents = terms.length - trouves;
+
+    if (!terms.length) {
+      toast.error("Ce registre ne contient aucune correspondance lisible");
+    } else if (!trouves) {
+      toast.error(
+        `Aucune des ${terms.length} correspondances du registre n'apparaît dans ce document. S'agit-il du bon fichier ?`,
+      );
+    } else if (absents) {
+      toast(
+        `${trouves} correspondance${trouves > 1 ? "s" : ""} sur ${terms.length} retrouvée${trouves > 1 ? "s" : ""} — ${absents} absente${absents > 1 ? "s" : ""} de ce document`,
+      );
+    } else {
+      toast.success(
+        `${trouves} correspondance${trouves > 1 ? "s" : ""} retrouvée${trouves > 1 ? "s" : ""}`,
+      );
+    }
   },
 
   /** Pre-detection par expressions regulieres. */
@@ -678,7 +714,11 @@ export const useAnonymizer = create((set, get) => ({
 
   /** Le workspace ne s'affiche qu'une fois les prerequis reunis. */
   isReady() {
-    const { document: extracted, mode, registry } = get();
-    return Boolean(extracted) && (mode === "pseudo" || Boolean(registry));
+    const { document: extracted, mode, registry, confirmed } = get();
+    return (
+      Boolean(extracted) &&
+      confirmed &&
+      (mode === "pseudo" || Boolean(registry))
+    );
   },
 }));

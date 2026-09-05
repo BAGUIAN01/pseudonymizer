@@ -94,13 +94,13 @@ export function ModeSidebar() {
             Filtre IA
           </span>
           <span className="text-[16px] font-bold tracking-[-0.01em] text-strong">
-            Anonymizer
+            Pseudonymizer
           </span>
         </div>
       </div>
 
       <nav className="flex min-h-0 flex-1 flex-col justify-center" data-tour="modes">
-        <div className="flex flex-col gap-[5px] rounded-2xl bg-tint/4 p-1.5 shadow-[var(--shadow-panel)]">
+        <div className="bg-paper flex flex-col gap-[5px] rounded-2xl border p-1.5 shadow-[var(--shadow-panel)]">
           {MODES.map((item) => {
             const active = mode === item.value;
             return (

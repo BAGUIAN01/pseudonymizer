@@ -147,6 +147,19 @@ pub async fn copy_to_dir(paths: Vec<String>, dir: String) -> Result<Vec<String>,
       .ok_or_else(|| format!("Nom de fichier illisible : {path}"))?;
 
     let mut target = destination.join(name);
+
+    // Le fichier produit se trouve deja a cote du document source. Choisir ce
+    // meme dossier pour le telechargement ne doit pas en fabriquer une copie
+    // numerotee : c'est le meme fichier.
+    let meme_fichier = match (source.canonicalize(), target.canonicalize()) {
+      (Ok(a), Ok(b)) => a == b,
+      _ => false,
+    };
+    if meme_fichier {
+      written.push(target.to_string_lossy().into_owned());
+      continue;
+    }
+
     if target.exists() {
       let stem = source.file_stem().and_then(|s| s.to_str()).unwrap_or("fichier");
       let extension = source.extension().and_then(|s| s.to_str()).unwrap_or("");

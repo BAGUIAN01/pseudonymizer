@@ -41,7 +41,7 @@ const ETAPES = [
     cible: "depot",
     titre: "Déposez un document",
     texte:
-      "Glissez un PDF, un DOCX, un tableur ou un fichier texte. Pour cette visite, nous ouvrons un document d’exercice.",
+      "Glissez un PDF, un DOCX, un tableur ou un fichier texte — et, à droite, un registre de correspondances si vous en avez déjà un. Vous voyez alors ce qui est chargé, et rien ne s’ouvre avant que vous confirmiez. Pour cette visite, nous ouvrons un document d’exercice.",
     // Un document est deja ouvert : la zone de depot n'est meme plus a
     // l'ecran, et l'etape n'aurait rien a designer.
     montrerSi: ({ document }) => !document,
@@ -63,7 +63,7 @@ const ETAPES = [
     cible: "panneau",
     titre: "Vérifiez les correspondances",
     texte:
-      "Chaque terme apparaît ici avec son type et son pseudonyme, modifiables. Le champ de recherche ajoute un terme sans avoir à le retrouver dans le texte, et indique combien de fois il apparaît.",
+      "Chaque terme apparaît ici avec son type et son pseudonyme, modifiables. Le champ de recherche ajoute un terme sans avoir à le retrouver dans le texte. Et « Importer des correspondances » charge un registre existant, même après avoir ouvert le document.",
   },
   {
     cible: "traitement",

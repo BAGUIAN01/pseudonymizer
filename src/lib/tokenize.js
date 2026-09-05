@@ -12,7 +12,7 @@
  * `TYPE_0001` reste un seul token.
  */
 export const WORD_RE =
-  /[0-9A-Za-zÀ-ÖØ-öø-ÿ]+(?:[.'@_-][0-9A-Za-zÀ-ÖØ-öø-ÿ]+)*/g;
+  /[0-9A-Za-zÀ-ÖØ-öø-ÿ]+(?:[.'’@_-][0-9A-Za-zÀ-ÖØ-öø-ÿ]+)*/g;
 
 /**
  * Decoupe un paragraphe en tokens `{ text, word }`.
@@ -35,6 +35,23 @@ export function tokenize(text) {
 /** Tokenise un document entier (tableau de paragraphes). */
 export function tokenizeDocument(paragraphs) {
   return paragraphs.map(tokenize);
+}
+
+/**
+ * Ramene un mot a une forme comparable : minuscules, sans accents, apostrophes
+ * uniformisees.
+ *
+ * Un registre est saisi a la main ou vient d'un autre document : « Sonatel »
+ * y cotoie « SONATEL », « Ndiaye » y perd son accent, et l'apostrophe typo-
+ * graphique remplace l'apostrophe droite. Comparer les formes brutes ferait
+ * echouer ces correspondances alors qu'elles designent la meme donnee.
+ */
+export function normaliseWord(word) {
+  return String(word)
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[’ʼ]/g, "'")
+    .toLowerCase();
 }
 
 /** Indices des tokens qui sont des mots, dans l'ordre. */
@@ -67,7 +84,7 @@ export function phraseAt(doc, p, from, to) {
  * @returns {Array<{p: number, from: number, to: number}>}
  */
 export function findOccurrences(doc, phrase) {
-  const words = (String(phrase).match(WORD_RE) ?? []).map((w) => w.toLowerCase());
+  const words = (String(phrase).match(WORD_RE) ?? []).map(normaliseWord);
   const hits = [];
   if (!words.length) return hits;
 
@@ -76,7 +93,7 @@ export function findOccurrences(doc, phrase) {
     for (let k = 0; k + words.length <= idx.length; k++) {
       let ok = true;
       for (let j = 0; j < words.length; j++) {
-        if (tokens[idx[k + j]].text.toLowerCase() !== words[j]) {
+        if (normaliseWord(tokens[idx[k + j]].text) !== words[j]) {
           ok = false;
           break;
         }

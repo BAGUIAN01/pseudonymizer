@@ -12,6 +12,7 @@ import { useAnonymizer } from "@/store/use-anonymizer";
 export function DropStage() {
   const mode = useAnonymizer((s) => s.mode);
   const registry = useAnonymizer((s) => s.registry);
+  const document = useAnonymizer((s) => s.document);
   const openDocument = useAnonymizer((s) => s.openDocument);
   const openDroppedFile = useAnonymizer((s) => s.openDroppedFile);
   const openRegistry = useAnonymizer((s) => s.openRegistry);
@@ -34,7 +35,7 @@ export function DropStage() {
         </h1>
         <p className="text-muted-foreground max-w-[460px] text-[13.5px] leading-[1.6]">
           {pseudo
-            ? "Tout se passe en local. Les données structurées sont pré-détectées ; vous complétez ensuite vous-même la sélection des mots à remplacer."
+            ? "Tout se passe en local. Les données structurées sont pré-détectées ; vous complétez ensuite vous-même la sélection. Un registre existant peut être chargé pour reprendre des correspondances déjà établies."
             : "Le texte revenu de votre traitement : ses pseudonymes seront remplacés par les valeurs d’origine. Le document n’a pas besoin d’être identique à celui de départ."}
         </p>
         {!pseudo && registry?.fromProject && (
@@ -49,26 +50,38 @@ export function DropStage() {
           accent
           onActivate={openDocument}
           onFile={(file) => openDroppedFile(file)}
-          title="Glissez-déposez votre document"
+          title={
+            <>
+              Glissez-déposez votre <Mot>document</Mot>{" "}
+              {pseudo ? "à pseudonymiser" : "à restaurer"}
+            </>
+          }
           hint="PDF · DOCX · XLSX · TXT"
           action="ou parcourir les fichiers"
+          charge={document?.fileName}
         />
 
-        {!pseudo && (
-          <DropZone
-            compacte
-            onActivate={openRegistry}
-            onFile={(file) => openDroppedRegistry(file)}
-            title="Registre de correspondance"
-            hint={
-              registry?.fromProject
-                ? "Déjà chargé — déposez-en un autre pour le remplacer"
-                : (registry?.fileName ?? "Requis pour restaurer")
-            }
-            action="ou parcourir les fichiers"
-          />
-        )}
+        <DropZone
+          compacte
+          onActivate={openRegistry}
+          onFile={(file) => openDroppedRegistry(file)}
+          title={
+            <>
+              Le <Mot>registre</Mot> de correspondances
+            </>
+          }
+          hint={
+            registry?.fromProject
+              ? "Déjà chargé — déposez-en un autre"
+              : (registry?.fileName ??
+                (pseudo ? "Facultatif — .xlsx" : "Requis pour restaurer"))
+          }
+          action="ou parcourir les fichiers"
+          charge={registry?.fromProject ? null : registry?.fileName}
+        />
       </div>
+
+      <ContinueBar />
 
       {/*
         Document d'exercice, sans passer par un fichier. Il sert de bac a
@@ -106,7 +119,64 @@ export function DropStage() {
   );
 }
 
-function DropZone({ accent, compacte, onActivate, onFile, title, hint, action }) {
+/**
+ * Barre de validation : rien ne s'ouvre tant qu'elle n'a pas ete actionnee.
+ *
+ * Deposer un fichier ouvrait auparavant l'espace de travail sur-le-champ, sans
+ * laisser le temps de verifier ce qui avait ete pris ni d'ajouter le registre.
+ */
+function ContinueBar() {
+  const mode = useAnonymizer((s) => s.mode);
+  const document = useAnonymizer((s) => s.document);
+  const registry = useAnonymizer((s) => s.registry);
+  const confirmStage = useAnonymizer((s) => s.confirmStage);
+
+  const pseudo = mode === "pseudo";
+  const registreManquant = !pseudo && !registry;
+  const pret = Boolean(document) && !registreManquant;
+
+  if (!document) return null;
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      {registreManquant && (
+        <p className="text-[12px] text-dim">
+          Ajoutez le registre de correspondances pour pouvoir restaurer ce
+          document.
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={confirmStage}
+        disabled={!pret}
+        className="bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer rounded-xl px-8 py-3 text-[13px] font-bold transition-colors disabled:cursor-default disabled:opacity-40"
+      >
+        {pseudo ? "Continuer vers la sélection" : "Continuer vers la restauration"}
+      </button>
+    </div>
+  );
+}
+
+/** Le mot qui designe ce que la zone attend, detache du reste de la phrase. */
+function Mot({ children }) {
+  return (
+    <span className="font-bold underline decoration-2 underline-offset-4">
+      {children}
+    </span>
+  );
+}
+
+function DropZone({
+  accent,
+  charge,
+  compacte,
+  onActivate,
+  onFile,
+  title,
+  hint,
+  action,
+}) {
   const [dragging, setDragging] = useState(false);
 
   return (
@@ -125,28 +195,46 @@ function DropZone({ accent, compacte, onActivate, onFile, title, hint, action })
         if (file) onFile(file);
       }}
       className={cn(
-        "flex min-h-[200px] cursor-pointer flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed p-8 text-center transition-colors",
+        "flex min-h-[200px] cursor-pointer flex-col items-center justify-center gap-2.5 rounded-xl border-2 border-dashed p-8 text-center transition-colors",
         compacte ? "w-[320px] flex-none" : "flex-1",
         accent
           ? dragging
-            ? "border-accent-strong/80 bg-primary/10"
-            : "border-accent-strong/45 hover:border-accent-strong/70 hover:bg-primary/5"
+            ? "border-accent-strong bg-primary/10"
+            : "border-accent-strong/60 hover:border-accent-strong hover:bg-primary/5"
           : dragging
-            ? "border-tint/55 bg-tint/8"
-            : "border-tint/28 hover:border-tint/45 hover:bg-tint/4",
+            ? "border-tint/70 bg-tint/8"
+            : "border-tint/40 hover:border-tint/60 hover:bg-tint/4",
       )}
     >
       <span
         className={cn(
-          "mb-1 size-3.5 -translate-y-px rotate-[-45deg] border-b-2 border-l-2",
-          accent ? "border-accent-strong" : "border-tint/55",
+          "mb-1 -translate-y-px border-b-2 border-l-2",
+          charge ? "size-3 rotate-[-45deg]" : "size-3.5 rotate-[-45deg]",
+          charge
+            ? "border-accent-strong"
+            : accent
+              ? "border-accent-strong"
+              : "border-tint/55",
         )}
         aria-hidden
       />
-      <span className="text-[15px] font-semibold">{title}</span>
-      <span className="font-mono text-[10.5px] tracking-[0.1em] text-faint uppercase">
-        {hint}
-      </span>
+      {charge ? (
+        <>
+          <span className="max-w-full truncate text-[15px] font-semibold">
+            {charge}
+          </span>
+          <span className="text-accent-strong font-mono text-[10.5px] font-semibold tracking-[0.1em] uppercase">
+            Chargé
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="text-[15px] font-semibold">{title}</span>
+          <span className="font-mono text-[10.5px] tracking-[0.1em] text-faint uppercase">
+            {hint}
+          </span>
+        </>
+      )}
       {action && (
         <span
           className={cn(
@@ -154,7 +242,7 @@ function DropZone({ accent, compacte, onActivate, onFile, title, hint, action })
             accent ? "text-accent-strong" : "text-dim",
           )}
         >
-          {action}
+          {charge ? "remplacer le fichier" : action}
         </span>
       )}
     </button>

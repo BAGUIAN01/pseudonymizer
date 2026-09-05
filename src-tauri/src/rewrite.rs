@@ -17,14 +17,42 @@ pub struct Replacement {
 /* Recherche insensible a la casse                                     */
 /* ------------------------------------------------------------------ */
 
-/// Position `(debut, fin)` en octets de la premiere occurrence de `needle`
-/// dans `hay` a partir de `start`, sans tenir compte de la casse.
+/// Replie un caractere pour la comparaison : minuscule, sans accent.
+///
+/// Renvoie `None` pour un signe diacritique combinant, qui ne compte alors pour
+/// rien. C'est ce qui permet a « aout » de correspondre a « aout » accentue,
+/// que l'accent soit un caractere precompose ou une lettre suivie de sa marque :
+/// un PDF restitue indifferemment l'une ou l'autre forme, et une comparaison
+/// litterale echouait sur la seconde.
+fn fold_char(c: char) -> Option<char> {
+  if ('\u{0300}'..='\u{036f}').contains(&c) {
+    return None;
+  }
+  let base = match c {
+    'a' | 'A' | 'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' | 'À' | 'Á' | 'Â' | 'Ã' | 'Ä'
+    | 'Å' => 'a',
+    'c' | 'C' | 'ç' | 'Ç' => 'c',
+    'e' | 'E' | 'è' | 'é' | 'ê' | 'ë' | 'È' | 'É' | 'Ê' | 'Ë' => 'e',
+    'i' | 'I' | 'ì' | 'í' | 'î' | 'ï' | 'Ì' | 'Í' | 'Î' | 'Ï' => 'i',
+    'n' | 'N' | 'ñ' | 'Ñ' => 'n',
+    'o' | 'O' | 'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'Ò' | 'Ó' | 'Ô' | 'Õ' | 'Ö' => 'o',
+    'u' | 'U' | 'ù' | 'ú' | 'û' | 'ü' | 'Ù' | 'Ú' | 'Û' | 'Ü' => 'u',
+    'y' | 'Y' | 'ý' | 'ÿ' | 'Ý' => 'y',
+    // L'apostrophe typographique et l'apostrophe droite designent le meme signe.
+    '\u{2019}' | '\u{02bc}' => '\'',
+    other => return Some(other.to_lowercase().next().unwrap_or(other)),
+  };
+  Some(base)
+}
+
+/// Position `(debut, fin)` en octets de la premiere occurrence de `needle` dans
+/// `hay` a partir de `start`, sans tenir compte de la casse ni des accents.
 ///
 /// La comparaison se fait caractere par caractere plutot que sur une copie
-/// mise en minuscules : `to_lowercase` peut changer la longueur d'un
-/// caractere, ce qui decalerait les index par rapport a la chaine d'origine.
+/// repliee : le repliement peut changer la longueur d'un caractere, ce qui
+/// decalerait les index par rapport a la chaine d'origine.
 fn find_ci(hay: &str, needle: &str, start: usize) -> Option<(usize, usize)> {
-  let target: Vec<char> = needle.chars().flat_map(char::to_lowercase).collect();
+  let target: Vec<char> = needle.chars().filter_map(fold_char).collect();
   if target.is_empty() || start > hay.len() {
     return None;
   }
@@ -43,17 +71,18 @@ fn find_ci(hay: &str, needle: &str, start: usize) -> Option<(usize, usize)> {
       if k == target.len() {
         break;
       }
+      let Some(folded) = fold_char(c) else {
+        // Une marque combinante appartient au caractere precedent : elle est
+        // absorbee sans consommer de caractere du motif.
+        consumed += c.len_utf8();
+        continue;
+      };
       consumed += c.len_utf8();
-      for lc in c.to_lowercase() {
-        if k >= target.len() || target[k] != lc {
-          ok = false;
-          break;
-        }
-        k += 1;
-      }
-      if !ok {
+      if folded != target[k] {
+        ok = false;
         break;
       }
+      k += 1;
     }
 
     if ok && k == target.len() {
@@ -923,6 +952,36 @@ mod tests {
       Replacement { from: "Jean Dupont".into(), to: "[PERSONNE_0001]".into() },
       Replacement { from: "Awa".into(), to: "[PERSONNE_0002]".into() },
     ]
+  }
+
+  #[test]
+  fn retrouve_un_terme_accentue_sous_ses_deux_formes() {
+    // Un PDF restitue « aout » accentue tantot en caractere precompose (U+00FB),
+    // tantot en lettre suivie de sa marque combinante (u + U+0302). Les deux
+    // doivent correspondre au terme du registre, sans quoi la date reste en
+    // clair dans le document produit.
+    let reps = vec![Replacement {
+      from: "20 août 2026".into(),
+      to: "[DATE_0001]".into(),
+    }];
+
+    let precompose = "Fait le 20 août 2026 à Ouagadougou.";
+    let decompose = "Fait le 20 aou\u{0302}t 2026 à Ouagadougou.";
+
+    assert_eq!(
+      apply_to_text(precompose, &reps),
+      "Fait le [DATE_0001] à Ouagadougou."
+    );
+    assert_eq!(
+      apply_to_text(decompose, &reps),
+      "Fait le [DATE_0001] à Ouagadougou."
+    );
+  }
+
+  #[test]
+  fn ignore_la_casse_et_les_accents_du_registre() {
+    let reps = vec![Replacement { from: "AWA NDIAYE".into(), to: "[PERSONNE_0009]".into() }];
+    assert_eq!(apply_to_text("Signé par Awa Ndiayé.", &reps), "Signé par [PERSONNE_0009].");
   }
 
   #[test]

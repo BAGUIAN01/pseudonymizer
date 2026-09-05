@@ -10,6 +10,11 @@
   --color-dim: var(--text-dim);
   --color-faint: var(--text-faint);
   --color-surface: var(--surface);
+  /* Sol de l'application contre surface de travail : sans cette
+     distinction, le theme clair est un aplat blanc sans hierarchie. */
+  --color-paper: var(--paper);
+  /* Panneau lateral : entre le sol et le plan de travail. */
+  --color-panel: var(--panel);
   /* Teinte des voiles : blanche sur fond sombre, noire sur fond clair. */
   --color-tint: var(--tint);
   /* Le vert de marque en aplat est illisible en texte sur fond clair :
@@ -67,8 +72,10 @@
   themes divergent des la premiere retouche.
 */
 :root {
-  --background: #f7f8fa;
+  --background: #e9ecf1;
   --foreground: #0a0c10;
+  --paper: #ffffff;
+  --panel: #f2f4f7;
 
   --text-strong: #000000;
   --text-dim: #3c444e;
@@ -86,19 +93,19 @@
   --popover: #ffffff;
   --popover-foreground: #0a0c10;
 
-  --primary: #cbff4d;
-  --primary-foreground: #0b0d11;
+  --primary: #3f6e12;
+  --primary-foreground: #ffffff;
   --secondary: rgba(0, 0, 0, 0.05);
   --secondary-foreground: #14171c;
 
   --muted: rgba(0, 0, 0, 0.04);
   --muted-foreground: #3c444e;
-  --accent: rgba(203, 255, 77, 0.22);
+  --accent: rgba(63, 110, 18, 0.12);
   --accent-foreground: #2f3d09;
 
   --destructive: #c0322f;
 
-  --border: rgba(0, 0, 0, 0.1);
+  --border: rgba(0, 0, 0, 0.13);
   --input: rgba(0, 0, 0, 0.12);
   --ring: rgba(0, 0, 0, 0.28);
 
@@ -110,17 +117,19 @@
 
   --sidebar: transparent;
   --sidebar-foreground: #3c444e;
-  --sidebar-primary: #cbff4d;
-  --sidebar-primary-foreground: #0b0d11;
-  --sidebar-accent: rgba(203, 255, 77, 0.22);
+  --sidebar-primary: #3f6e12;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(63, 110, 18, 0.12);
   --sidebar-accent-foreground: #2f3d09;
-  --sidebar-border: rgba(0, 0, 0, 0.1);
+  --sidebar-border: rgba(0, 0, 0, 0.13);
   --sidebar-ring: rgba(0, 0, 0, 0.28);
 }
 
 .dark {
   --background: #111419;
   --foreground: #e8eaed;
+  --paper: #161a20;
+  --panel: #13161c;
 
   --text-strong: #f1f3f5;
   --text-dim: #98a1ac;

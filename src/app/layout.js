@@ -19,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata = {
-  title: "Anonymizer — Filtre IA",
+  title: "Pseudonymizer — Filtre IA",
   description:
     "Pseudonymisation et dé-pseudonymisation locale de documents, sans transmission de données.",
 };
@@ -36,7 +36,7 @@ export default function RootLayout({ children }) {
       <body className="h-full">
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem={false}
           disableTransitionOnChange
         >

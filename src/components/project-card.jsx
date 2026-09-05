@@ -31,7 +31,7 @@ export function ProjectCard() {
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <div
         data-tour="projet"
-        className="flex flex-col gap-1.5 rounded-2xl bg-tint/4 p-1.5 shadow-[var(--shadow-panel)]"
+        className="bg-paper flex flex-col gap-1.5 rounded-2xl border p-1.5 shadow-[var(--shadow-panel)]"
       >
         {/*
           Le projet actif se lit au-dessus du bouton, qui reste toujours en

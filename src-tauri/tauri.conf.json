@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Anonymizer",
-  "version": "0.1.4",
+  "productName": "Pseudonymizer",
+  "version": "0.1.5",
   "identifier": "sn.filtreia.anonymizer",
   "build": {
     "frontendDist": "../out",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Anonymizer — Filtre IA",
+        "title": "Pseudonymizer — Filtre IA",
         "width": 1440,
         "height": 900,
         "minWidth": 1180,

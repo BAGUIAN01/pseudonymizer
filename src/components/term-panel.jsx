@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { FileUpIcon } from "lucide-react";
 
 import {
   Select,
@@ -28,6 +29,7 @@ export function TermPanel() {
   const terms = useAnonymizer((s) => s.terms);
   const status = useAnonymizer((s) => s.status);
   const run = useAnonymizer((s) => s.run);
+  const openRegistry = useAnonymizer((s) => s.openRegistry);
 
   const pseudo = mode === "pseudo";
   const running = status === "running";
@@ -36,14 +38,30 @@ export function TermPanel() {
   return (
     <aside
       data-tour="panneau"
-      className="flex min-h-0 w-[360px] flex-none flex-col border-l bg-tint/[0.015]"
+      className="bg-panel flex min-h-0 w-[360px] flex-none flex-col border-l"
     >
-      <header className="flex h-14 flex-none items-center justify-between gap-3 border-b px-5">
+      <header className="flex h-14 flex-none items-center justify-between gap-2 border-b px-5">
         <h2 className="text-[13.5px] font-semibold">Correspondances</h2>
+
         <span className="text-muted-foreground font-mono text-[11px] whitespace-nowrap">
           {count ? `${count} terme${count > 1 ? "s" : ""}` : "0 terme"}
         </span>
       </header>
+
+      {/*
+        Le registre reste importable une fois le document ouvert : sans cela,
+        l'avoir oublie a l'ecran de depot obligeait a tout refermer.
+      */}
+      <div className="flex-none border-b px-5 py-3">
+        <button
+          type="button"
+          onClick={openRegistry}
+          className="bg-tint/6 hover:bg-tint/12 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-[12px] font-bold text-foreground transition-colors"
+        >
+          <FileUpIcon className="size-3.5" aria-hidden />
+          Importer des correspondances
+        </button>
+      </div>
 
       {pseudo && <TermSearch />}
 
@@ -124,7 +142,7 @@ function TermSearch() {
           }}
           placeholder="Rechercher ou ajouter un terme…"
           aria-label="Rechercher ou ajouter un terme"
-          className="h-9 flex-1 rounded-md border-0 bg-tint/6 px-2.5 text-[12px] text-foreground focus-visible:bg-tint/10 focus-visible:ring-0"
+          className="bg-paper focus-visible:border-ring h-9 flex-1 rounded-md border px-2.5 text-[12px] text-foreground focus-visible:ring-0"
         />
         <button
           type="button"
@@ -155,7 +173,7 @@ function TermRow({ term, editable }) {
   const n = term.hits.length;
 
   return (
-    <div className="flex flex-col gap-2.5 border-b px-5 py-4 transition-colors hover:bg-tint/[0.02]">
+    <div className="flex flex-col gap-2.5 border-b px-5 py-4 transition-colors hover:bg-tint/[0.045]">
       <div className="flex items-baseline gap-2.5">
         <span
           title={familyLabel(term.type)}
@@ -165,7 +183,17 @@ function TermRow({ term, editable }) {
         <h3 className="min-w-0 flex-1 text-[13px] font-semibold break-words">
           {term.text}
         </h3>
-        <span className="text-muted-foreground flex-none font-mono text-[10px] whitespace-nowrap">
+        <span
+          title={
+            n
+              ? undefined
+              : "Ce terme ne figure pas dans le document : il ne sera pas remplacé."
+          }
+          className={cn(
+            "flex-none font-mono text-[10px] whitespace-nowrap",
+            n ? "text-muted-foreground" : "text-destructive font-semibold",
+          )}
+        >
           {n} occurrence{n > 1 ? "s" : ""}
           {term.auto ? " · auto" : ""}
         </span>
@@ -187,7 +215,7 @@ function TermRow({ term, editable }) {
         >
           <SelectTrigger
             size="sm"
-            className="w-full cursor-pointer rounded-md border-0 bg-tint/6 text-[11px] font-semibold text-foreground"
+            className="bg-paper w-full cursor-pointer rounded-md border text-[11px] font-semibold text-foreground"
           >
             <SelectValue />
           </SelectTrigger>
@@ -205,7 +233,7 @@ function TermRow({ term, editable }) {
           onChange={(e) => setTermPseudo(term.id, e.target.value)}
           readOnly={!editable}
           aria-label={`Pseudonyme de ${term.text}`}
-          className="w-full rounded-md border-0 bg-tint/6 px-2.5 py-2 font-mono text-[11px] text-foreground focus-visible:bg-tint/10 focus-visible:ring-0"
+          className="bg-paper focus-visible:border-ring w-full rounded-md border px-2.5 py-2 font-mono text-[11px] text-foreground focus-visible:ring-0"
         />
       </div>
     </div>

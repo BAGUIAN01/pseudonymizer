@@ -49,12 +49,12 @@ export function AboutDialog() {
               Filtre IA
             </span>
             <Dialog.Title className="text-[17px] font-bold text-strong">
-              Anonymizer
+              Pseudonymizer
             </Dialog.Title>
           </div>
 
           <Dialog.Description className="text-[12.5px] leading-[1.65] text-foreground">
-            Anonymizer remplace les données personnelles d’un document par des
+            Pseudonymizer remplace les données personnelles d’un document par des
             pseudonymes, pour qu’il puisse être confié à un service extérieur —
             une intelligence artificielle, un prestataire — sans exposer ce
             qu’il contient. Le chemin inverse restaure ensuite les valeurs
@@ -79,7 +79,7 @@ export function AboutDialog() {
             <span className="text-[11.5px] text-dim">
               Développé par{" "}
               <span className="font-semibold text-foreground">
-                Harouna BAGUIAN
+                SPIVTEN
               </span>
             </span>
 
