@@ -25,9 +25,45 @@ const initialProcess = {
   deliverables: null,
 };
 
-/** Renumerote les pseudonymes d'un type apres ajout ou changement de type. */
-function nextIndexForType(terms, type, excludeId) {
-  return terms.filter((t) => t.type === type && t.id !== excludeId).length + 1;
+/** Numero porte par un pseudonyme, s'il est de ce type : `[MONTANT_0003]` → 3. */
+const PSEUDO_RE = /^\[([A-Z]+)_(\d+)\]$/;
+
+function indexOfPseudo(pseudo, type) {
+  const m = PSEUDO_RE.exec(pseudo ?? "");
+  return m && m[1] === type ? Number(m[2]) : null;
+}
+
+/**
+ * Premier numero libre pour ce type.
+ *
+ * Il se compte sur le projet autant que sur la session. Compter les termes du
+ * seul document donnait deux fois le meme pseudonyme a deux valeurs
+ * differentes : le deuxieme document d'un dossier repartait de `0001`, et le
+ * registre du projet finissait avec « [MONTANT_0001] » designant deux montants.
+ * La restauration rendait alors une valeur pour une autre — silencieusement.
+ *
+ * Les numeros sont releves sur les pseudonymes eux-memes plutot que comptes :
+ * retirer un terme puis en ajouter un autre reattribuait sinon un numero
+ * encore pris, et un pseudonyme modifie a la main n'etait pas vu.
+ */
+function nextIndexForType(state, type, excludeId) {
+  const pris = new Set();
+
+  for (const t of state.terms ?? []) {
+    if (t.id === excludeId) continue;
+    const i = indexOfPseudo(t.pseudo, type);
+    if (i) pris.add(i);
+  }
+
+  const projet = (state.projects ?? []).find((p) => p.id === state.activeProjectId);
+  for (const t of projet?.terms ?? []) {
+    const i = indexOfPseudo(t.pseudo, type);
+    if (i) pris.add(i);
+  }
+
+  let i = 1;
+  while (pris.has(i)) i += 1;
+  return i;
 }
 
 export const useAnonymizer = create((set, get) => ({
@@ -66,9 +102,34 @@ export const useAnonymizer = create((set, get) => ({
       onboardingDone: done,
       tourContext: done
         ? null
-        : { document: Boolean(get().document), projet: Boolean(get().activeProjectId) },
+        : {
+            document: Boolean(get().document),
+            projet: Boolean(get().activeProjectId),
+            mode: get().mode,
+          },
     });
     await get().persist();
+  },
+
+  /**
+   * Referme ce que la visite guidee a ouvert.
+   *
+   * Elle charge le document d'exercice pour avoir quelque chose a montrer :
+   * le laisser en place ferait croire, une fois la visite finie, que c'est le
+   * document de l'utilisateur. On rend donc l'application telle qu'elle etait
+   * au moment ou la visite a ete armee — et jamais plus : si un document
+   * etait deja ouvert, il n'est pas touche.
+   */
+  endTour() {
+    const { tourContext, mode } = get();
+    const depart = tourContext?.mode ?? "pseudo";
+
+    if (mode !== depart) {
+      // `setMode` remet le document a zero au passage.
+      get().setMode(depart);
+      return;
+    }
+    if (!tourContext?.document) get().reset();
   },
 
   async loadProjects() {
@@ -78,7 +139,11 @@ export const useAnonymizer = create((set, get) => ({
       onboardingDone,
       tourContext: onboardingDone
         ? null
-        : { document: Boolean(get().document), projet: Boolean(activeId) },
+        : {
+            document: Boolean(get().document),
+            projet: Boolean(activeId),
+            mode: get().mode,
+          },
     });
     // Retrouver son projet a l'ouverture fait partie de ne rien perdre.
     if (activeId && projects.some((p) => p.id === activeId)) {
@@ -252,6 +317,13 @@ export const useAnonymizer = create((set, get) => ({
     const { activeProjectId, projects, terms, document: extracted } = get();
     if (!activeProjectId) return;
 
+    // Le document d'exercice n'est pas un travail : la visite guidee lance un
+    // traitement reel pour le montrer, et le bouton d'exemple permet d'essayer
+    // l'application a vide. Ni l'un ni l'autre ne doit verser « Mariama
+    // Diallo » et « SahelTech Industries » dans le registre d'un projet, ni y
+    // deposer un document que la reouverture ferait resurgir.
+    if (extracted?.exercice) return;
+
     const next = projects.map((project) => {
       if (project.id !== activeProjectId) return project;
 
@@ -367,11 +439,19 @@ export const useAnonymizer = create((set, get) => ({
     set({ view });
   },
 
+  /**
+   * Ferme le document, et lui seul.
+   *
+   * Le registre est deliberement conserve : il n'appartient pas au document
+   * mais a la seance. En restauration il est obligatoire, et le jeter obligeait
+   * a le retrouver pour chaque piece d'un meme dossier — alors que c'est le
+   * meme registre du debut a la fin. Il reste visible sur l'ecran de depot, ou
+   * un autre peut le remplacer.
+   */
   reset() {
     set({
       document: null,
       doc: [],
-      registry: null,
       terms: [],
       nextId: 1,
       confirmed: false,
@@ -538,7 +618,10 @@ export const useAnonymizer = create((set, get) => ({
     let id = get().nextId;
     const terms = [];
     for (const item of detected) {
-      const index = terms.filter((t) => t.type === item.type).length + 1;
+      // L'etat passe au calcul inclut les termes deja attribues dans cette
+      // boucle : sans cela, deux montants du meme document se partageraient
+      // « [MONTANT_0001] ».
+      const index = nextIndexForType({ ...get(), terms }, item.type);
       terms.push({
         id: id++,
         text: item.text,
@@ -597,7 +680,7 @@ export const useAnonymizer = create((set, get) => ({
       id: get().nextId,
       text: clean,
       type: kind,
-      pseudo: buildPseudo(kind, nextIndexForType(terms, kind)),
+      pseudo: buildPseudo(kind, nextIndexForType(get(), kind)),
       hits: findOccurrences(doc, clean),
     };
     set((s) => ({
@@ -641,7 +724,7 @@ export const useAnonymizer = create((set, get) => ({
           ? {
               ...t,
               type,
-              pseudo: buildPseudo(type, nextIndexForType(s.terms, type, id)),
+              pseudo: buildPseudo(type, nextIndexForType(s, type, id)),
             }
           : t,
       ),

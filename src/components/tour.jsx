@@ -97,6 +97,10 @@ const ETAPES = [
     texte:
       "Nous voici en restauration. Déposez ici le rapport revenu de votre traitement extérieur : ses pseudonymes reprendront leurs valeurs d’origine. Le projet actif fournit les correspondances, aucun registre à recharger.",
     prepare: "restauration",
+  
+    // Changer de mode remet le document a zero : la visite ne montre la
+    // restauration que lorsqu'elle n'a rien a detruire.
+    montrerSi: ({ document }) => !document,
   },
   {
     cible: "panneau",
@@ -104,6 +108,10 @@ const ETAPES = [
     texte:
       "Nous avons ouvert un texte pseudonymisé d’exemple. Ses pseudonymes sont déjà reconnus, avec les valeurs d’origine en face : il ne reste qu’à lancer la restauration.",
     prepare: "exemple-restauration",
+  
+    // Changer de mode remet le document a zero : la visite ne montre la
+    // restauration que lorsqu'elle n'a rien a detruire.
+    montrerSi: ({ document }) => !document,
   },
   {
     cible: "theme",
@@ -120,6 +128,7 @@ export function Tour() {
   const onboardingDone = useAnonymizer((s) => s.onboardingDone);
   const setOnboardingDone = useAnonymizer((s) => s.setOnboardingDone);
   const loadSample = useAnonymizer((s) => s.loadSample);
+  const endTour = useAnonymizer((s) => s.endTour);
   const setMode = useAnonymizer((s) => s.setMode);
   const setView = useAnonymizer((s) => s.setView);
   const run = useAnonymizer((s) => s.run);
@@ -147,11 +156,14 @@ export function Tour() {
 
   const terminer = useCallback(() => {
     setIndex(0);
-    // La visite a pu basculer en restauration pour la montrer : on rend
-    // l'application dans son mode de depart.
-    setMode("pseudo");
+    // La visite a ouvert l'exercice et a pu basculer en restauration : elle
+    // rend l'application dans l'etat ou elle l'a trouvee. Remettre simplement
+    // le mode a « pseudo » ne suffisait pas — quand la visite etait
+    // interrompue avant la bascule, l'appel ne faisait rien et l'exercice
+    // restait ouvert, comme si c'etait le document de l'utilisateur.
+    endTour();
     setOnboardingDone(true);
-  }, [setMode, setOnboardingDone]);
+  }, [endTour, setOnboardingDone]);
 
   // Certaines etapes ont besoin que l'application soit dans un etat donne.
   // Le document de l'utilisateur prime : la visite ne remplace jamais son

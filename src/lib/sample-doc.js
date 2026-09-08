@@ -4,6 +4,8 @@
  * Reprend l'exercice du support de formation Filtre IA.
  */
 export const SAMPLE_DOCUMENT = {
+  // Marque l'exercice comme tel : il ne doit jamais entrer dans un projet.
+  exercice: true,
   fileName: "Exercice 1.pdf",
   path: "",
   format: "pdf",
@@ -20,6 +22,7 @@ export const SAMPLE_DOCUMENT = {
  * de-pseudonymisation attend en entree, aux cotes du registre ci-dessous.
  */
 export const SAMPLE_PSEUDONYMISED_DOCUMENT = {
+  exercice: true,
   fileName: "Exercice 1_pseudonymise.pdf",
   path: "",
   format: "pdf",
