@@ -83,11 +83,6 @@ h1{
 }
 .lede{margin:10px 0 0;font-size:13.5px;line-height:1.65;color:var(--page-dim);max-width:60ch}
 
-.rail-label{
-  font-family:"JetBrains Mono",ui-monospace,monospace;
-  font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--page-faint);
-  padding:0 2px 8px;
-}
 .rail{display:flex;flex-direction:column}
 .rail button{
   display:block;width:100%;text-align:left;cursor:pointer;
@@ -105,16 +100,8 @@ h1{
 }
 .rail-group:first-child{margin-top:0}
 .rail .sub{display:block;font-weight:400;font-size:11.5px;color:var(--page-faint);margin-top:2px}
-.rail button:focus-visible,.tgl:focus-visible,.gest:focus-visible{outline:2px solid var(--page-accent);outline-offset:2px}
+.rail button:focus-visible{outline:2px solid var(--page-accent);outline-offset:2px}
 
-.tgls{display:flex;gap:22px}
-.tgl{
-  cursor:pointer;border:0;background:none;color:var(--page-dim);
-  font:inherit;font-size:13px;font-weight:600;padding:4px 0;
-  text-underline-offset:6px;text-decoration-thickness:2px;
-}
-.tgl[aria-pressed="true"]{color:var(--page-ink);font-weight:700;
-  text-decoration:underline;text-decoration-color:var(--page-accent)}
 
 /* Tableau des ruptures bureau → tactile */
 .shifts{display:flex;flex-direction:column;border-top:1px solid var(--page-line-soft)}
@@ -164,7 +151,7 @@ h1{
   --accent-strong:#2f5709; --primary:#3f6e12; --primary-fg:#ffffff;
   --border:rgba(0,0,0,.13); --tint:11 13 17; --destructive:#c0322f;
   --mark-a:.32; --mark-hi:.5; --pseudo-a:.36; --dot-mix:35%;
-  --shadow-nav:0 10px 30px rgba(16,24,40,.16);
+  --shadow-nav:0 10px 30px rgba(16,24,40,.16); --zone-on:rgba(63,110,18,.09);
   position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;
   background:var(--paper);color:var(--foreground);
   font-size:15px;line-height:1.4;-webkit-tap-highlight-color:transparent;user-select:none;
@@ -175,7 +162,7 @@ h1{
   --accent-strong:#cbff4d; --primary:#cbff4d; --primary-fg:#0b0d11;
   --border:rgba(255,255,255,.09); --tint:255 255 255; --destructive:#ff8a8a;
   --mark-a:.11; --mark-hi:.2; --pseudo-a:.14; --dot-mix:0%;
-  --shadow-nav:0 12px 36px rgba(0,0,0,.6);
+  --shadow-nav:0 12px 36px rgba(0,0,0,.6); --zone-on:rgba(203,255,77,.09);
 }
 .phone *{box-sizing:border-box}
 :where(.phone) :where(button){font:inherit;color:inherit;background:none;border:0;cursor:pointer}
@@ -216,27 +203,51 @@ h1{
 
 .body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .body.pad{padding:0 20px 28px}
-.body.tabroot{padding-bottom:126px}
+.body.tabroot{display:flex;flex-direction:column;padding:6px 20px 96px}
 .body::-webkit-scrollbar{width:0}
 
 .homebar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
   width:134px;height:5px;border-radius:99px;background:var(--strong);opacity:.24;z-index:70;pointer-events:none}
 
-/* Sélecteur de mode : la seule ombre de l'interface, comme au bureau. */
-.navpill{
+/* Navigation : deux pastilles détachées — les seules ombres de l'interface.
+   À gauche les deux modes, en icônes seules ; à droite le projet. */
+.dock{
   position:absolute;left:20px;right:20px;bottom:26px;z-index:30;
-  display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:5px;
-  border-radius:20px;background:var(--sheet);border:1px solid var(--border);
-  box-shadow:var(--shadow-nav);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:none;
 }
-.navpill button{
-  display:flex;flex-direction:column;align-items:flex-start;gap:1px;
-  padding:10px 13px;border-radius:15px;color:var(--dim);text-align:left;
+.pill{
+  display:flex;gap:4px;padding:5px;border-radius:22px;pointer-events:auto;
+  background:var(--sheet);border:1px solid var(--border);box-shadow:var(--shadow-nav);
 }
-.navpill button[aria-selected="true"]{background:var(--primary);color:var(--primary-fg)}
-.navpill button:active{opacity:1}
-.navpill .i{font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:600;opacity:.7}
-.navpill .t{font-size:13px;font-weight:700;letter-spacing:-.015em;white-space:nowrap}
+.pill button{
+  width:54px;height:46px;border-radius:17px;color:var(--dim);
+  display:flex;align-items:center;justify-content:center;
+}
+.pill button[aria-selected="true"]{background:var(--primary);color:var(--primary-fg)}
+.pill button:active{opacity:.6}
+.pill .mono{font-family:"JetBrains Mono",monospace;font-size:12.5px;font-weight:700;letter-spacing:.03em}
+
+/* Bascule de thème, dans le bandeau : un état, pas une action — le vert
+   n'y a donc pas sa place. */
+.themetog{display:flex;gap:2px;padding:2px;border-radius:12px;background:rgb(var(--tint)/.06)}
+.themetog button{width:36px;height:28px;border-radius:10px;color:var(--faint);
+  display:flex;align-items:center;justify-content:center}
+.themetog button[aria-pressed="true"]{background:var(--paper);color:var(--strong)}
+
+/* Les deux dépôts : l'écran entier, rien d'autre. */
+.zones{display:flex;flex-direction:column;gap:12px;height:100%}
+.zone{
+  flex:1;min-height:140px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:7px;padding:22px;text-align:center;
+  border-radius:22px;background:rgb(var(--tint)/.045);
+}
+.zone[data-on="1"]{background:var(--zone-on)}
+.zone .g{color:var(--faint);opacity:.55;margin-bottom:2px;display:block}
+.zone .k{font-size:17px;font-weight:600;letter-spacing:-.02em;color:var(--strong)}
+.zone .s{font-size:12.5px;color:var(--faint)}
+.zone .s.req{color:var(--accent-strong)}
+.zone .n{font-size:15px;font-weight:600;color:var(--strong);overflow-wrap:anywhere;max-width:100%}
+.zone .a{font-size:12.5px;font-weight:600;color:var(--accent-strong)}
 
 /* --- Type ---------------------------------------------------------------- */
 .big{font-size:25px;font-weight:700;letter-spacing:-.035em;color:var(--strong);line-height:1.15;text-wrap:balance}
@@ -389,32 +400,25 @@ h1{
       <p class="eyebrow">Maquette — Filtre IA</p>
       <h1>Pseudonymizer, au doigt</h1>
       <p class="lede">
-        Le même flux que le logiciel de bureau, ramené à 390 px et à un pouce. Les deux modes
-        descendent dans une barre flottante — seule ombre de l'interface, comme au bureau ; le
-        reste tient en filets d'un pixel. Prototype réel : tout ce qui est ci-contre répond.
+        Le même flux que le logiciel de bureau, ramené à 390 px et à un pouce. Trois onglets :
+        les deux modes en icônes dans une pastille à gauche, le projet dans une seconde à droite.
+        L'accueil ne demande plus que deux choses. Prototype réel : tout ce qui est ci-contre répond.
       </p>
     </div>
 
     <div class="rail" id="rail"></div>
 
     <div>
-      <p class="rail-label">Thème de l'application</p>
-      <div class="tgls" id="themeToggle">
-        <button class="tgl" data-app-theme="light" aria-pressed="true">Clair</button>
-        <button class="tgl" data-app-theme="dark" aria-pressed="false">Sombre</button>
-      </div>
-    </div>
-
-    <div>
-      <p class="rail-label">Ce qui change du bureau</p>
+      <p class="rail-group" style="margin-top:0">Ce qui change du bureau</p>
       <div class="shifts">
-        <div class="shift"><b>Glisser-déposer</b><span>Cible pleine largeur, sélecteur système, feuille d'action</span></div>
+        <div class="shift"><b>Glisser-déposer</b><span>Deux dépôts qui occupent l'écran, sélecteur système, feuille d'action</span></div>
         <div class="shift"><b>Double-clic sur un nom</b><span>Appui long : l'entité entière, « Mariama Diallo » d'un geste</span></div>
         <div class="shift"><b>Barre flottante de sélection</b><span>Feuille basse, dans la zone du pouce</span></div>
         <div class="shift"><b>Panneau latéral de 360 px</b><span>Feuille à trois paliers par-dessus le document</span></div>
-        <div class="shift"><b>Colonne de modes</b><span>Barre flottante à deux onglets : même ombre, même détachement</span></div>
+        <div class="shift"><b>Colonne de modes</b><span>Deux pastilles flottantes : les modes en icônes, le projet à part</span></div>
+        <div class="shift"><b>Bascule de thème en pied de colonne</b><span>Segment clair / sombre en haut à droite du bandeau</span></div>
         <div class="shift"><b>Survols et infobulles</b><span>États d'appui, cibles de 44 px, feuilles au lieu d'infobulles</span></div>
-        <div class="shift"><b>Cartes empilées</b><span>Filets d'un pixel : la doctrine du bureau, tenue jusqu'au bout</span></div>
+        <div class="shift"><b>Cartes empilées</b><span>Filets d'un pixel partout — sauf les deux dépôts, qui sont l'écran</span></div>
       </div>
     </div>
   </div>
@@ -657,80 +661,122 @@ function renumber(){
 /* =========================================================================
    Écrans
    ========================================================================= */
-/* Barre flottante : les deux modes, en bas, dans la zone du pouce. */
-const NAVPILL = () => '<nav class="navpill">' + [
-  ["pseudo","01","Pseudonymiser"],["depseudo","02","Dé-pseudonymiser"],
-].map(([id,i,label]) =>
-  '<button data-act="tab" data-v="'+id+'" aria-selected="'+(S.mode===id)+'">' +
-  '<span class="i">'+i+'</span><span class="t">'+label+'</span></button>').join("") + '</nav>';
+/* Les seules icônes de l'interface : celles de la navigation et du thème.
+   Masquer / révéler dit les deux modes plus vite que n'importe quel mot. */
+const G = (d) => '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+  'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+d+'</svg>';
+const GLYPH = {
+  mask: G('<path d="M10.6 6.2A9.6 9.6 0 0 1 12 6c4.5 0 7.8 3.2 9 6a13 13 0 0 1-2.6 3.6"/>' +
+          '<path d="M6.4 8.2C4.8 9.4 3.7 11 3 12c1.2 2.8 4.5 6 9 6 1.3 0 2.6-.3 3.7-.8"/>' +
+          '<path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M4 4l16 16"/>'),
+  reveal: G('<path d="M3 12c1.2-2.8 4.5-6 9-6s7.8 3.2 9 6c-1.2 2.8-4.5 6-9 6s-7.8-3.2-9-6Z"/>' +
+            '<circle cx="12" cy="12" r="2.6"/>'),
+  sun: G('<circle cx="12" cy="12" r="3.6"/><path d="M12 4v1.6M12 18.4V20M4 12h1.6M18.4 12H20' +
+         'M6.3 6.3l1.2 1.2M16.5 16.5l1.2 1.2M17.7 6.3l-1.2 1.2M7.5 16.5l-1.2 1.2"/>'),
+  moon: G('<path d="M20 14.6A8.2 8.2 0 0 1 9.4 4 8.2 8.2 0 1 0 20 14.6Z"/>'),
+  file: G('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>'),
+  grid: G('<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 10v10"/>'),
+};
 
-/* En-tête d'un écran poussé : le retour en libellé, pas en chevron. */
-const backHead = (right, title) =>
-  '<header class="head"><div class="headrow">' +
-    '<button class="textbtn" data-act="back">Retour</button>' +
-    (right ? '<span class="right">'+right+'</span>' : "") +
-  '</div><h1 class="big">'+esc(title)+'</h1></header>';
+/* Trois onglets : les deux modes à gauche, le projet à droite. */
+function NAV(){
+  const tab = (id, glyph, label) =>
+    '<button data-act="tab" data-v="'+id+'" aria-selected="'+(S.tab===id)+'" aria-label="'+label+'">' +
+    glyph + '</button>';
+  const initials = S.project.name.split(/\s+/).filter(w => /[\p{L}]/u.test(w))
+    .slice(0,2).map(w => w[0].toUpperCase()).join("");
+  return '<div class="dock">' +
+    '<div class="pill">' +
+      tab("pseudo", GLYPH.mask, "Pseudonymiser") +
+      tab("depseudo", GLYPH.reveal, "Dé-pseudonymiser") +
+    '</div>' +
+    '<div class="pill">' +
+      '<button data-act="tab" data-v="project" aria-selected="'+(S.tab==="project")+'" ' +
+      'aria-label="Projet — '+esc(S.project.name)+'"><span class="mono">'+esc(initials)+'</span></button>' +
+    '</div>' +
+  '</div>';
+}
+
+const themeToggle = () => {
+  const dark = document.getElementById("phone").dataset.app === "dark";
+  return '<div class="themetog">' +
+    '<button data-act="app-theme" data-v="light" aria-pressed="'+(!dark)+'" aria-label="Thème clair">'+GLYPH.sun+'</button>' +
+    '<button data-act="app-theme" data-v="dark" aria-pressed="'+dark+'" aria-label="Thème sombre">'+GLYPH.moon+'</button>' +
+  '</div>';
+};
+
+const tabHead = (title) =>
+  '<header class="head">' +
+    '<div class="headrow"><span class="lbl">Filtre IA</span>'+themeToggle()+'</div>' +
+    '<h1 class="big">'+esc(title)+'</h1>' +
+  '</header>';
 
 const rows = (items) => '<div class="list">' + items.join("") + '</div>';
 
-/* --- Racine d'onglet ------------------------------------------------------ */
+/* --- Onglets 01 et 02 : deux dépôts, rien d'autre -------------------------- */
 function renderTabRoot(){
   const pseudo = S.mode === "pseudo";
   const d = S.picked.doc, r = S.picked.registry;
   const ready = !!d && (pseudo || !!r);
-  const recents = pseudo
-    ? [["Exercice 1.pdf","il y a 2 h"],["Convention_PNUD.docx","hier"],["Budget_T3_2026.xlsx","hier"]]
-    : [["Exercice 1_pseudonymise.pdf","registre en projet"],["Convention_PNUD_pseudo.docx","hier"]];
+
+  const zone = (on, act, glyph, key, name, sub, req) =>
+    '<button class="zone" data-on="'+(on?1:0)+'" data-act="'+act+'">' +
+      (on
+        ? '<span class="lbl">'+key+'</span><span class="n">'+esc(name)+'</span>' +
+          '<span class="a">Remplacer</span>'
+        : '<span class="g">'+glyph+'</span><span class="k">'+key+'</span>' +
+          '<span class="s'+(req?" req":"")+'">'+sub+'</span>') +
+    '</button>';
 
   return (
+  tabHead(pseudo ? "Pseudonymiser" : "Dé-pseudonymiser") +
+  '<div class="body tabroot">' +
+    '<div class="zones">' +
+      zone(!!d, "pick-doc", GLYPH.file, "Le document", d, "PDF · DOCX · XLSX · TXT") +
+      zone(!!r, "pick-reg", GLYPH.grid, "Les correspondances", r,
+           pseudo ? "Facultatif · .xlsx" : "Requis · .xlsx", !pseudo) +
+    '</div>' +
+    (d ? '<button class="cta" style="margin-top:12px;flex:none"'+(ready?"":" disabled")+' data-act="confirm">' +
+           (pseudo ? "Continuer vers la sélection" : "Continuer vers la restauration") + '</button>' : "") +
+  '</div>' + NAV());
+}
+
+/* --- Onglet 03 : le projet, et ce qui n'appartient à aucun flux ------------ */
+function renderProject(){
+  const list = [
+    [S.project.name, "3 documents", 12, true],
+    ["Audit MEF 2025", "7 documents", 38, false],
+    ["Marchés publics — lot 4", "1 document", 5, false],
+  ];
+  return (
   '<header class="head">' +
-    '<div class="headrow">' +
-      '<span class="lbl">Pseudonymizer</span>' +
-      '<span class="right">' +
-        '<button class="textbtn" data-act="open" data-v="projects">Projets</button>' +
-        '<button class="textbtn" data-act="open" data-v="settings">Réglages</button>' +
-      '</span>' +
-    '</div>' +
-    '<h1 class="big">'+(pseudo?"Le document à pseudonymiser":"Le document à restaurer")+'</h1>' +
+    '<div class="headrow"><span class="lbl">Filtre IA</span>'+themeToggle()+'</div>' +
+    '<h1 class="big">Projet</h1>' +
   '</header>' +
+  '<div class="body pad tabroot" style="display:block;padding-bottom:110px">' +
+    '<p class="p" style="margin:0 0 20px">Un projet retient les paires établies. Il rend la restauration possible sans avoir à retrouver le fichier de registre.</p>' +
+    rows(list.map(([nm,d,n,active]) =>
+      '<button class="row" data-act="select-project" data-v="'+esc(nm)+'">' +
+        '<span class="grow"><span class="t">'+esc(nm)+'</span>' +
+        '<span class="d">'+plural(n,"correspondance")+' · '+d+'</span></span>' +
+        (active ? '<span class="v accent">Actif</span>' : "") +
+      '</button>')) +
+    '<button class="txtcta" data-act="new-project" style="margin-top:6px">Nouveau projet</button>' +
 
-  '<div class="body pad tabroot">' +
-    '<p class="p" style="margin:0 0 22px">'+(pseudo
-      ? "Les e-mails, téléphones, montants et identifiants sont pré-détectés. Vous complétez la sélection au doigt."
-      : "Les pseudonymes reprendront les valeurs d’origine, lues dans le registre.")+'</p>' +
-
-    '<button class="band" data-act="pick-doc">' +
-      (d ? '<span class="t">'+esc(d)+'</span><span class="lbl accent">Chargé</span><span class="a">Remplacer</span>'
-         : '<span class="t">Choisir un document</span><span class="lbl">PDF · DOCX · XLSX · TXT</span>' +
-           '<span class="a">Fichiers, photos ou numérisation</span>') +
-    '</button>' +
-
-    '<button class="row" data-act="pick-reg" style="border-top:0">' +
-      '<span class="grow"><span class="t">Registre de correspondances</span></span>' +
-      '<span class="v'+(r?" accent":"")+'">'+(r ? "Chargé" : (pseudo ? "Facultatif" : "Requis"))+'</span>' +
-    '</button>' +
-    (r ? '<p class="num" style="margin:-4px 0 0">'+esc(r)+'</p>' : "") +
-
-    (d && !ready ? '<p class="p" style="margin:16px 0 0;font-size:12px">Ajoutez le registre pour pouvoir restaurer ce document.</p>' : "") +
-    (d ? '<button class="cta" style="margin-top:18px"'+(ready?"":" disabled")+' data-act="confirm">' +
-           (pseudo ? "Continuer vers la sélection" : "Continuer vers la restauration") + '</button>'
-       : '<button class="txtcta" data-act="sample" style="margin-top:6px">Charger le document d’exemple</button>') +
-
-    '<div class="section"><span class="lbl">Projet</span>' +
-      rows(['<button class="row" data-act="open" data-v="projects">' +
-        '<span class="grow"><span class="t">'+esc(S.project.name)+'</span></span>' +
-        '<span class="v accent">'+S.project.terms+' paires</span></button>']) +
+    '<div class="section"><span class="lbl">Aide</span>' +
+      rows([
+        '<button class="row" data-act="toast" data-v="Guide de démarrage relancé">' +
+          '<span class="grow"><span class="t">Revoir le guide de démarrage</span></span></button>',
+        '<button class="row" data-act="toast" data-v="Pseudonymizer 0.1.5 — Filtre IA">' +
+          '<span class="grow"><span class="t">À propos</span></span>' +
+          '<span class="v">Filtre IA</span></button>',
+        '<button class="row" data-act="toast" data-v="Vous avez la dernière version">' +
+          '<span class="grow"><span class="t">Mise à jour</span></span>' +
+          '<span class="v accent">0.1.5</span></button>',
+      ]) +
     '</div>' +
-
-    '<div class="section"><span class="lbl">'+(pseudo?"Documents récents":"Documents pseudonymisés")+'</span>' +
-      rows(recents.map(([nm,when]) =>
-        '<button class="row" data-act="recent" data-v="'+esc(nm)+'">' +
-          '<span class="grow"><span class="t">'+esc(nm)+'</span></span>' +
-          '<span class="v">'+esc(when)+'</span></button>')) +
-    '</div>' +
-
-    '<p class="p" style="margin:26px 0 0;font-size:12px">Traitement local. Le document, le registre et les projets restent sur l’appareil.</p>' +
-  '</div>' + NAVPILL());
+    '<p class="p" style="margin:24px 0 0;font-size:12px">Traitement local. Le document, le registre et les projets restent sur l’appareil.</p>' +
+  '</div>' + NAV());
 }
 
 /* --- Espace de travail ---------------------------------------------------- */
@@ -801,61 +847,10 @@ function renderRunning(){
     '<p class="num">'+P().length+' paragraphes · '+plural(S.terms.length,"correspondance")+'</p></div>';
 }
 
-/* --- Écrans poussés depuis l'en-tête -------------------------------------- */
-function renderProjects(){
-  const list = [
-    [S.project.name, "3 documents", 12, true],
-    ["Audit MEF 2025", "7 documents", 38, false],
-    ["Marchés publics — lot 4", "1 document", 5, false],
-  ];
-  return (
-  backHead('<button class="textbtn" data-act="new-project">Nouveau</button>', "Projets") +
-  '<div class="body pad">' +
-    '<p class="p" style="margin:0 0 22px">Un projet retient les paires établies. Il rend la restauration possible sans avoir à retrouver le fichier de registre.</p>' +
-    rows(list.map(([nm,d,n,active]) =>
-      '<button class="row" data-act="select-project" data-v="'+esc(nm)+'">' +
-        '<span class="grow"><span class="t">'+esc(nm)+'</span>' +
-        '<span class="d">'+plural(n,"correspondance")+' · '+d+'</span></span>' +
-        (active ? '<span class="v accent">Actif</span>' : "") +
-      '</button>')) +
-  '</div>');
-}
-
-function renderSettings(){
-  const dark = document.getElementById("phone").dataset.app === "dark";
-  return (
-  backHead("", "Réglages") +
-  '<div class="body pad">' +
-    '<div class="section" style="margin-top:2px"><span class="lbl">Apparence</span>' +
-      '<div class="opts" style="padding:0 0 8px">' +
-        '<button class="opt" data-act="app-theme" data-v="light" aria-pressed="'+(!dark)+'" style="--mark:143 227 176">Clair</button>' +
-        '<button class="opt" data-act="app-theme" data-v="dark" aria-pressed="'+dark+'" style="--mark:143 227 176">Sombre</button>' +
-      '</div>' +
-    '</div>' +
-
-    '<div class="section"><span class="lbl">Aide</span>' +
-      rows([
-        '<button class="row" data-act="toast" data-v="Guide de démarrage relancé">' +
-          '<span class="grow"><span class="t">Revoir le guide de démarrage</span>' +
-          '<span class="d">Quatre étapes, sur le document d’exemple</span></span></button>',
-        '<button class="row" data-act="toast" data-v="Pseudonymizer 0.1.5 — Filtre IA">' +
-          '<span class="grow"><span class="t">À propos</span></span>' +
-          '<span class="v">Filtre IA</span></button>',
-        '<button class="row" data-act="toast" data-v="Vous avez la dernière version">' +
-          '<span class="grow"><span class="t">Mise à jour</span></span>' +
-          '<span class="v accent">0.1.5 · à jour</span></button>',
-      ]) +
-    '</div>' +
-
-    '<p class="p" style="margin:26px 0 0;font-size:12px">L’application ne demande aucune permission réseau. Rien n’est envoyé, à aucun moment.</p>' +
-  '</div>');
-}
-
 const SCREENS = {
   pseudo:   {render:renderTabRoot},
   depseudo: {render:renderTabRoot},
-  projects: {render:renderProjects},
-  settings: {render:renderSettings},
+  project:  {render:renderProject},
   work:     {render:renderWork},
 };
 </script>
@@ -924,7 +919,9 @@ function pop(){
   afterNav(S.stack[S.stack.length-1]);
 }
 function setTab(id){
-  S.tab = id; S.mode = id; S.stack = [id];
+  S.tab = id;
+  if(id === "pseudo" || id === "depseudo") S.mode = id;
+  S.stack = [id];
   stack.innerHTML = "";
   const el = document.createElement("div");
   el.className = "screen fade";
@@ -1275,15 +1272,15 @@ phone.addEventListener("click", (e) => {
   const act = el.dataset.act, v = el.dataset.v;
 
   if(act === "tab"){
-    if(S.mode !== v){
-      // Changer de mode change de document et de correspondances : on repart net.
+    if(S.tab === v && S.stack.length === 1) return;
+    // Changer de mode change de document et de correspondances : on repart net.
+    if((v === "pseudo" || v === "depseudo") && v !== S.mode){
       S.picked = {doc:null, registry:null}; S.terms = []; S.nextId = 1;
       S.status = "idle"; S.view = "source"; S.draft = null;
-      setTab(v); tick(6);
-    }else if(S.stack.length > 1){ setTab(v); }
+    }
+    setTab(v); tick(6);
     return;
   }
-  if(act === "open"){ push(v); return; }
   if(act === "back"){ pop(); return; }
   if(act === "recent"){
     S.picked.doc = v;
@@ -1427,9 +1424,8 @@ const RAIL = [
   {group:"Onglet 02 — Dé-pseudonymiser"},
   {id:"depseudo", t:"Dépôt et registre",  d:"Le registre est requis"},
   {id:"restore",  t:"Restauration",       d:"Pseudonymes reconnus, valeurs rendues"},
-  {group:"Depuis l’en-tête"},
-  {id:"projects", t:"Projets",            d:"Mémoire des correspondances"},
-  {id:"settings", t:"Réglages",           d:"Thème, guide, mise à jour"},
+  {group:"Onglet 03 — Projet"},
+  {id:"project",  t:"Projet et aide",     d:"Mémoire des paires, guide, version"},
 ];
 const railEl = document.getElementById("rail");
 railEl.innerHTML = RAIL.map(r => r.group
@@ -1454,8 +1450,7 @@ railEl.addEventListener("click", (e) => {
   const go = b.dataset.goto;
   resetFlow();
 
-  if(go === "pseudo" || go === "depseudo"){ setTab(go); return; }
-  if(go === "projects" || go === "settings"){ setTab("pseudo"); push(go); return; }
+  if(go === "pseudo" || go === "depseudo" || go === "project"){ setTab(go); return; }
 
   if(go === "restore"){
     setTab("depseudo");
@@ -1479,16 +1474,9 @@ railEl.addEventListener("click", (e) => {
 /* --- Thème de l'application ---------------------------------------------- */
 function setAppTheme(v){
   phone.dataset.app = v;
-  document.querySelectorAll("#themeToggle .tgl").forEach(b =>
-    b.setAttribute("aria-pressed", String(b.dataset.appTheme === v)));
-  const id = S.stack[S.stack.length - 1];
-  if(id === "settings") paint();
+  paint();
   if(DOCK.el) refreshDock();
 }
-document.getElementById("themeToggle").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-app-theme]"); if(b) setAppTheme(b.dataset.appTheme);
-});
-
 /* --- Départ -------------------------------------------------------------- */
 setTab("pseudo");
 </script>
