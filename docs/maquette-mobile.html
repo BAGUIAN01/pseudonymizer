@@ -101,21 +101,20 @@ h1{
 .rail-group{
   font-family:"JetBrains Mono",ui-monospace,monospace;
   font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--page-accent-ink);margin:18px 0 4px;padding:0 6px;
+  color:var(--page-faint);margin:18px 0 4px;padding:0 6px;
 }
 .rail-group:first-child{margin-top:0}
 .rail .sub{display:block;font-weight:400;font-size:11.5px;color:var(--page-faint);margin-top:2px}
 .rail button:focus-visible,.tgl:focus-visible,.gest:focus-visible{outline:2px solid var(--page-accent);outline-offset:2px}
 
-.tgls{display:flex;gap:8px;flex-wrap:wrap}
+.tgls{display:flex;gap:22px}
 .tgl{
-  cursor:pointer;border:1px solid var(--page-line);background:var(--page-panel);
-  color:var(--page-ink);font:inherit;font-size:11.5px;font-weight:600;
-  padding:7px 12px;border-radius:9px;transition:background-color .15s,border-color .15s;
+  cursor:pointer;border:0;background:none;color:var(--page-dim);
+  font:inherit;font-size:13px;font-weight:600;padding:4px 0;
+  text-underline-offset:6px;text-decoration-thickness:2px;
 }
-.tgl[aria-pressed="true"]{background:var(--page-accent);border-color:var(--page-accent);color:var(--page-bg)}
-:root[data-theme="dark"] .tgl[aria-pressed="true"],
-:root:not([data-theme="light"]) .tgl[aria-pressed="true"]{color:#0b0d11}
+.tgl[aria-pressed="true"]{color:var(--page-ink);font-weight:700;
+  text-decoration:underline;text-decoration-color:var(--page-accent)}
 
 /* Tableau des ruptures bureau → tactile */
 .shifts{display:flex;flex-direction:column;border-top:1px solid var(--page-line-soft)}
@@ -125,10 +124,7 @@ h1{
 }
 .shift b{font-size:12.5px;font-weight:600}
 .shift span{font-size:11.5px;line-height:1.5;color:var(--page-dim)}
-.shift span::before{
-  content:"→";color:var(--page-accent-ink);font-family:"JetBrains Mono",monospace;
-  margin-right:6px;font-size:10px;
-}
+
 
 /* --- Scène --------------------------------------------------------------- */
 .stage{display:flex;flex-direction:column;align-items:center;gap:20px}
@@ -150,49 +146,43 @@ h1{
   width:118px;height:32px;border-radius:20px;background:#0b0d11;z-index:60;pointer-events:none;
 }
 
-.gestures{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:460px}
-.gest{
-  border:1px solid var(--page-line);background:var(--page-panel);color:var(--page-dim);
-  font:inherit;font-size:11px;padding:6px 11px;border-radius:99px;cursor:default;
-}
-.gest b{color:var(--page-ink);font-weight:600}
+.gestures{max-width:430px;margin:0;text-align:center;font-size:12px;
+  line-height:1.7;color:var(--page-faint)}
+.gestures b{color:var(--page-dim);font-weight:600}
 </style>
 <style>
 /* =========================================================================
-   L'application — jetons repris de src/app/globals.css, deux thèmes,
-   pilotés par [data-app] et non par le thème du visiteur : la maquette
-   doit pouvoir montrer les deux quel que soit l'écran qui la regarde.
+   L'application — jetons de src/app/globals.css.
+
+   Parti pris repris du bureau : tout est plat. Une seule ombre, sur la
+   barre de modes, seul élément volontairement détaché. Les zones sont
+   séparées par des filets d'un pixel, jamais par des cartes empilées.
    ========================================================================= */
 .phone{
-  --background:#e9ecf1; --paper:#ffffff; --panel:#f2f4f7; --surface:#ffffff;
+  --paper:#ffffff; --sheet:#f2f4f7;
   --foreground:#0a0c10; --strong:#000000; --dim:#3c444e; --faint:#6b737d;
   --accent-strong:#2f5709; --primary:#3f6e12; --primary-fg:#ffffff;
   --border:rgba(0,0,0,.13); --tint:11 13 17; --destructive:#c0322f;
   --mark-a:.32; --mark-hi:.5; --pseudo-a:.36; --dot-mix:35%;
-  --shadow-sheet:0 -18px 44px rgba(16,24,40,.16);
-  --shadow-panel:0 8px 20px rgba(16,24,40,.1);
+  --shadow-nav:0 10px 30px rgba(16,24,40,.16);
   position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;
-  background:var(--background);color:var(--foreground);
-  font-size:15px;line-height:1.4;
-  -webkit-tap-highlight-color:transparent;
-  user-select:none;
+  background:var(--paper);color:var(--foreground);
+  font-size:15px;line-height:1.4;-webkit-tap-highlight-color:transparent;user-select:none;
 }
 .phone[data-app="dark"]{
-  --background:#111419; --paper:#161a20; --panel:#13161c; --surface:#1a1e25;
+  --paper:#161a20; --sheet:#1a1e25;
   --foreground:#e8eaed; --strong:#f1f3f5; --dim:#98a1ac; --faint:#6b747e;
   --accent-strong:#cbff4d; --primary:#cbff4d; --primary-fg:#0b0d11;
   --border:rgba(255,255,255,.09); --tint:255 255 255; --destructive:#ff8a8a;
   --mark-a:.11; --mark-hi:.2; --pseudo-a:.14; --dot-mix:0%;
-  --shadow-sheet:0 -22px 60px rgba(0,0,0,.6);
-  --shadow-panel:0 18px 40px rgba(0,0,0,.45);
+  --shadow-nav:0 12px 36px rgba(0,0,0,.6);
 }
 .phone *{box-sizing:border-box}
 :where(.phone) :where(button){font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-.phone button:active{transform:scale(.975)}
-.phone button,.phone .row{transition:transform .1s ease,background-color .16s ease}
+.phone button:active{opacity:.55}
 .phone :focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 
-/* --- Coque : barre d'état, pile d'écrans, onglets ------------------------- */
+/* --- Coque --------------------------------------------------------------- */
 .statusbar{
   position:absolute;top:0;left:0;right:0;height:54px;z-index:50;
   display:flex;align-items:center;justify-content:space-between;
@@ -202,10 +192,7 @@ h1{
 .statusbar .glyphs{display:flex;align-items:center;gap:5px}
 
 .stack{position:absolute;inset:0;overflow:hidden}
-.screen{
-  position:absolute;inset:0;display:flex;flex-direction:column;
-  background:var(--background);will-change:transform;
-}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--paper);will-change:transform}
 .screen.push{animation:slide-in .34s cubic-bezier(.32,.72,0,1) both}
 .screen.pop{animation:slide-out .3s cubic-bezier(.32,.72,0,1) both}
 .screen.behind{animation:recede .34s cubic-bezier(.32,.72,0,1) both}
@@ -213,218 +200,181 @@ h1{
 .screen.fade{animation:fade-in .2s ease both}
 @keyframes slide-in{from{transform:translateX(100%)}to{transform:translateX(0)}}
 @keyframes slide-out{from{transform:translateX(0)}to{transform:translateX(100%)}}
-@keyframes recede{from{transform:translateX(0);filter:brightness(1)}to{transform:translateX(-24%);filter:brightness(.86)}}
-@keyframes advance{from{transform:translateX(-24%);filter:brightness(.86)}to{transform:translateX(0);filter:brightness(1)}}
+@keyframes recede{from{transform:translateX(0);filter:brightness(1)}to{transform:translateX(-24%);filter:brightness(.9)}}
+@keyframes advance{from{transform:translateX(-24%);filter:brightness(.9)}to{transform:translateX(0);filter:brightness(1)}}
 @keyframes fade-in{from{opacity:0}to{opacity:1}}
 
-.head{
-  flex:none;padding:58px 20px 10px;display:grid;
-  grid-template-columns:44px 1fr 44px;align-items:center;gap:8px;
-  background:var(--background);
+.head{flex:none;display:flex;flex-direction:column;gap:5px;padding:54px 20px 14px;background:var(--paper)}
+.headrow{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.headrow .right{display:flex;gap:18px}
+.textbtn{
+  font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:600;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
+  min-height:44px;display:flex;align-items:center;white-space:nowrap;
 }
-.head .title{text-align:center;font-size:14.5px;font-weight:600;color:var(--strong);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.head .sub{display:block;font-family:"JetBrains Mono",monospace;font-size:9px;
-  letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-top:2px}
-.iconbtn{
-  width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;
-  color:var(--dim);
-}
-.iconbtn.filled{background:rgb(var(--tint)/.06)}
+.filename{font-size:15px;font-weight:600;color:var(--strong);overflow-wrap:anywhere}
 
 .body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-.body.pad{padding:4px 20px 28px}
+.body.pad{padding:0 20px 28px}
 .body.tabroot{padding-bottom:126px}
 .body::-webkit-scrollbar{width:0}
 
-/* Sélecteur de mode : au bureau, le seul élément de la colonne à porter une
-   ombre, volontairement détaché du reste. Ici il descend dans la zone du
-   pouce et garde son ombre — c'est le même objet, déplacé. */
+.homebar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+  width:134px;height:5px;border-radius:99px;background:var(--strong);opacity:.24;z-index:70;pointer-events:none}
+
+/* Sélecteur de mode : la seule ombre de l'interface, comme au bureau. */
 .navpill{
   position:absolute;left:20px;right:20px;bottom:26px;z-index:30;
-  display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:6px;
-  border-radius:24px;background:var(--surface);border:1px solid var(--border);
-  box-shadow:var(--shadow-panel);
+  display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:5px;
+  border-radius:20px;background:var(--sheet);border:1px solid var(--border);
+  box-shadow:var(--shadow-nav);
 }
 .navpill button{
   display:flex;flex-direction:column;align-items:flex-start;gap:1px;
-  padding:11px 14px;border-radius:18px;color:var(--dim);text-align:left;
+  padding:10px 13px;border-radius:15px;color:var(--dim);text-align:left;
 }
 .navpill button[aria-selected="true"]{background:var(--primary);color:var(--primary-fg)}
-.navpill .i{font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:600;opacity:.75}
+.navpill button:active{opacity:1}
+.navpill .i{font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:600;opacity:.7}
 .navpill .t{font-size:13px;font-weight:700;letter-spacing:-.015em;white-space:nowrap}
-.homebar{
-  position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
-  width:134px;height:5px;border-radius:99px;background:var(--strong);opacity:.28;z-index:70;pointer-events:none;
-}
 
-/* --- Éléments d'interface ------------------------------------------------ */
-.big{font-size:26px;font-weight:700;letter-spacing:-.035em;color:var(--strong);line-height:1.12;text-wrap:balance}
-.h2{font-size:19px;font-weight:700;letter-spacing:-.03em;color:var(--strong)}
-.lbl{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.18em;
+/* --- Type ---------------------------------------------------------------- */
+.big{font-size:25px;font-weight:700;letter-spacing:-.035em;color:var(--strong);line-height:1.15;text-wrap:balance}
+.lbl{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.16em;
   text-transform:uppercase;color:var(--faint)}
 .lbl.accent{color:var(--accent-strong)}
 .p{font-size:13px;line-height:1.6;color:var(--dim)}
-.num{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.num{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--faint);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
 
-.section{display:flex;flex-direction:column;gap:10px;margin-top:24px}
-.section > .lbl{padding-left:2px}
-
-/* Cartes de mode : le seul endroit qui porte une ombre, comme au bureau */
-.modecard{
-  display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;
-  width:100%;text-align:left;padding:17px 18px;border-radius:20px;border:1px solid var(--border);
-  background:var(--paper);box-shadow:var(--shadow-panel);
-}
-.modecard.primary{background:var(--primary);color:var(--primary-fg);border-color:transparent}
-.modecard .t{font-size:16px;font-weight:700;letter-spacing:-.02em}
-.modecard .d{font-size:11.5px;line-height:1.45;margin-top:3px;opacity:.72}
-.modecard .i{font-family:"JetBrains Mono",monospace;font-size:11px;opacity:.75}
-
-.card{background:var(--paper);border:1px solid var(--border);border-radius:18px}
+/* --- Listes : des filets, pas des cartes --------------------------------- */
+.list{display:flex;flex-direction:column;border-top:1px solid var(--border)}
+.section{margin-top:26px}
+.section > .lbl{display:block;padding-bottom:9px}
 .row{
-  display:flex;align-items:center;gap:12px;width:100%;text-align:left;
-  padding:13px 15px;min-height:52px;
+  display:flex;align-items:baseline;gap:12px;width:100%;text-align:left;
+  padding:13px 0;min-height:48px;border-bottom:1px solid var(--border);
 }
-.row + .row{border-top:1px solid var(--border)}
-.row:active{background:rgb(var(--tint)/.05)}
 .row .grow{flex:1;min-width:0}
-.row .t{display:block;font-size:13.5px;font-weight:600;color:var(--strong);overflow-wrap:anywhere}
-.row .d{display:block;font-size:11.5px;color:var(--faint);margin-top:2px}
-.chevron{color:var(--faint);flex:none}
-.fmt{
-  font-family:"JetBrains Mono",monospace;font-size:9px;font-weight:600;letter-spacing:.08em;
-  padding:4px 6px;border-radius:6px;background:rgb(var(--tint)/.07);color:var(--dim);flex:none;
-}
+.row .t{display:block;font-size:14px;font-weight:600;color:var(--strong);overflow-wrap:anywhere}
+.row .d{display:block;font-size:12px;color:var(--faint);margin-top:3px;line-height:1.45}
+.row .v{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;
+  color:var(--faint);white-space:nowrap}
+.row .v.accent{color:var(--accent-strong)}
 
-.cta{
-  width:100%;padding:16px;border-radius:16px;background:var(--primary);color:var(--primary-fg);
-  font-size:14.5px;font-weight:700;text-align:center;letter-spacing:-.01em;
-}
-.cta[disabled]{opacity:.38;cursor:default}
-.cta[disabled]:active{transform:none}
-.cta.ghost{background:rgb(var(--tint)/.07);color:var(--foreground)}
-.cta.danger{background:transparent;color:var(--destructive);font-weight:600;font-size:13.5px}
-
-.footbar{
-  flex:none;padding:12px 20px 30px;background:var(--background);
-  border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;
-}
-
-.dropzone{
+/* Dépôt : une bande bornée par deux filets, pas un cadre en pointillé —
+   on ne dépose rien au doigt, on choisit. */
+.band{
   width:100%;display:flex;flex-direction:column;align-items:center;gap:9px;
-  padding:34px 20px;border-radius:22px;border:2px dashed rgb(63 110 18/.5);
-  background:rgb(63 110 18/.05);text-align:center;
+  padding:40px 0;text-align:center;
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
 }
-.phone[data-app="dark"] .dropzone{border-color:rgb(203 255 77/.4);background:rgb(203 255 77/.05)}
-.dropzone.loaded{border-style:solid}
-.dropzone .t{font-size:15px;font-weight:600;color:var(--strong)}
-.dropzone .a{font-size:12.5px;font-weight:600;color:var(--accent-strong)}
+.band .t{font-size:18px;font-weight:700;letter-spacing:-.025em;color:var(--strong)}
+.band .a{font-size:12.5px;font-weight:600;color:var(--accent-strong)}
 
-.local{
-  display:flex;align-items:center;gap:9px;padding:12px 14px;border-radius:14px;
-  background:rgb(var(--tint)/.04);color:var(--dim);font-size:11.5px;line-height:1.45;
+/* Le vert reste réservé à l'action : un seul bouton plein par écran. */
+.cta{
+  width:100%;padding:16px;border-radius:12px;background:var(--primary);
+  color:var(--primary-fg);font-size:14px;font-weight:700;text-align:center;
 }
+.cta[disabled]{opacity:.32;cursor:default}
+.txtcta{width:100%;padding:15px 0;text-align:center;font-size:13px;font-weight:600;color:var(--dim)}
+.txtcta.danger{color:var(--destructive)}
 
-/* Document */
-.doc{padding:14px 20px 132px;user-select:none}
-.doc h2{font-size:18px;font-weight:700;letter-spacing:-.028em;color:var(--strong);margin:0 0 14px}
-.doc p{font-size:14.5px;line-height:2.05;color:var(--foreground);margin:0 0 16px;text-wrap:pretty}
-.hint{
-  flex:none;padding:9px 20px;border-bottom:1px solid var(--border);
-  font-size:11.5px;color:var(--faint);background:var(--background);
+/* --- Document ------------------------------------------------------------ */
+.hint{flex:none;padding:0 20px 12px;font-size:12px;color:var(--faint);
+  border-bottom:1px solid var(--border);background:var(--paper)}
+.views{display:flex;gap:20px;padding:0 20px 11px;border-bottom:1px solid var(--border)}
+.views button{
+  font-size:13px;font-weight:600;color:var(--faint);padding:2px 0;
+  text-underline-offset:7px;text-decoration-thickness:2px;
 }
+.views button[aria-pressed="true"]{color:var(--strong);font-weight:700;
+  text-decoration:underline;text-decoration-color:var(--accent-strong)}
+
+.doc{padding:18px 20px 132px}
+.doc h2{font-size:17px;font-weight:700;letter-spacing:-.028em;color:var(--strong);margin:0 0 16px;text-wrap:balance}
+.doc p{font-size:14.5px;line-height:2.05;color:var(--foreground);margin:0 0 18px;text-wrap:pretty}
 .tok{white-space:pre-wrap}
 .mark{
-  border-radius:6px;padding:2px 4px;color:var(--strong);
+  border-radius:5px;padding:2px 3px;color:var(--strong);
   text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px;
   background-color:rgb(var(--mark)/var(--mark-a));
   text-decoration-color:color-mix(in srgb,rgb(var(--mark)),#000 45%);
 }
 .phone[data-app="dark"] .mark{text-decoration-color:rgb(var(--mark)/.75)}
-.mark.on{background-color:rgb(var(--mark)/var(--mark-hi))}
-.pseudo{
-  border-radius:6px;padding:2px 6px;font-family:"JetBrains Mono",monospace;font-size:12.5px;
-  color:var(--strong);background-color:rgb(var(--mark)/var(--pseudo-a));
-}
-.sel{background:rgb(var(--tint)/.14);border-radius:6px;padding:2px 4px;color:var(--strong)}
-.dot{
-  width:7px;height:7px;border-radius:99px;flex:none;
-  background-color:color-mix(in srgb,rgb(var(--mark)),#000 var(--dot-mix));
-}
+.pseudo{border-radius:5px;padding:2px 5px;font-family:"JetBrains Mono",monospace;
+  font-size:12.5px;color:var(--strong);background-color:rgb(var(--mark)/var(--pseudo-a))}
+.sel{background:rgb(var(--tint)/.14);border-radius:5px;padding:2px 3px;color:var(--strong)}
+.dot{width:7px;height:7px;border-radius:99px;flex:none;
+  background-color:color-mix(in srgb,rgb(var(--mark)),#000 var(--dot-mix))}
 
-.seg{display:flex;gap:2px;padding:2px;border-radius:11px;background:rgb(var(--tint)/.06)}
-.seg button{flex:1;padding:7px 10px;border-radius:9px;font-size:12px;font-weight:700;color:var(--strong)}
-.seg button[aria-pressed="true"]{background:var(--primary);color:var(--primary-fg)}
-.seg button[disabled]{opacity:.35}
-
-.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
-.chips::-webkit-scrollbar{height:0}
-.chip{
-  display:flex;align-items:center;gap:6px;flex:none;padding:9px 12px;border-radius:11px;
-  background:rgb(var(--tint)/.06);font-size:12px;font-weight:600;color:var(--dim);white-space:nowrap;
-}
-.chip[aria-pressed="true"]{background:var(--primary);color:var(--primary-fg)}
-.chip[aria-pressed="true"] .dot{background:var(--primary-fg);opacity:.85}
-
-.field{
-  width:100%;padding:11px 12px;border-radius:11px;border:1px solid var(--border);
-  background:var(--paper);color:var(--foreground);font:inherit;font-size:13px;
-  font-family:"JetBrains Mono",monospace;
-}
-.field::placeholder{color:var(--faint);font-family:"Space Grotesk",sans-serif}
-
-/* Feuilles */
+/* --- Feuilles ------------------------------------------------------------ */
 .layer{position:absolute;inset:0;z-index:40;pointer-events:none}
-.scrim{position:absolute;inset:0;background:rgba(0,0,0,.42);opacity:0;transition:opacity .3s ease}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.4);opacity:0;transition:opacity .3s ease}
 .scrim.on{opacity:1;pointer-events:auto}
 .sheet{
   position:absolute;left:0;right:0;bottom:0;
-  background:var(--surface);border-top:1px solid var(--border);
-  border-radius:26px 26px 0 0;box-shadow:var(--shadow-sheet);
-  display:flex;flex-direction:column;pointer-events:auto;
-  transform:translateY(100%);touch-action:none;
+  background:var(--sheet);border-top:1px solid var(--border);
+  border-radius:20px 20px 0 0;display:flex;flex-direction:column;
+  pointer-events:auto;transform:translateY(100%);touch-action:none;
 }
 .sheet.settled{transition:transform .34s cubic-bezier(.32,.72,0,1)}
-.grab{flex:none;display:flex;justify-content:center;padding:8px 0 4px;cursor:grab}
-.grab i{width:38px;height:4px;border-radius:99px;background:rgb(var(--tint)/.18);display:block}
-.sheet-head{
-  flex:none;display:flex;align-items:center;gap:10px;padding:4px 18px 14px;
-}
+.grab{flex:none;display:flex;justify-content:center;padding:9px 0 3px;cursor:grab}
+.grab i{width:34px;height:4px;border-radius:99px;background:rgb(var(--tint)/.16);display:block}
+.sheet-head{flex:none;display:flex;align-items:center;gap:12px;padding:6px 20px 16px}
 .sheet-head .t{flex:1;font-size:15px;font-weight:700;letter-spacing:-.02em;color:var(--strong)}
+.sheet-head .num{flex:none}
 .sheet-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .sheet-body::-webkit-scrollbar{width:0}
-.sheet-foot{flex:none;padding:10px 18px 30px;border-top:1px solid var(--border);
-  display:flex;flex-direction:column;gap:8px;background:var(--surface)}
+.sheet-foot{flex:none;padding:12px 20px 30px;border-top:1px solid var(--border);
+  display:flex;flex-direction:column;gap:2px;background:var(--sheet)}
+.pad20{padding:0 20px}
 
-.termrow{display:flex;flex-direction:column;gap:7px;padding:13px 18px;border-bottom:1px solid var(--border)}
-.termrow .l1{display:flex;align-items:center;gap:9px}
-.termrow .tx{flex:1;min-width:0;font-size:13.5px;font-weight:600;color:var(--strong);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.termrow .l2{display:flex;align-items:center;gap:8px;padding-left:16px}
-.tag{font-size:10.5px;font-weight:600;color:var(--dim);background:rgb(var(--tint)/.06);
-  padding:3px 7px;border-radius:6px;flex:none}
-.pmono{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent-strong);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.termrow{
+  display:flex;flex-direction:column;gap:5px;width:100%;text-align:left;
+  padding:13px 20px;border-top:1px solid var(--border);
+}
+.termrow .l1{display:flex;align-items:baseline;gap:9px}
+.termrow .tx{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--strong);overflow-wrap:anywhere}
+.termrow .l2{padding-left:16px;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--faint)}
+.termrow .l2 b{color:var(--accent-strong);font-weight:500}
 
-.empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:42px 34px;text-align:center}
+/* Type d'une donnée : un choix, pas une action — le vert n'y a pas sa place.
+   L'option retenue est soulignée de la teinte de sa famille. */
+.opts{display:flex;gap:20px;overflow-x:auto;padding:0 20px 16px;scrollbar-width:none}
+.opts::-webkit-scrollbar{height:0}
+.opt{display:flex;align-items:center;gap:7px;flex:none;padding:6px 0;
+  font-size:13px;color:var(--dim);white-space:nowrap;
+  text-underline-offset:7px;text-decoration-thickness:2px}
+.opt[aria-pressed="true"]{color:var(--strong);font-weight:700;text-decoration:underline;
+  text-decoration-color:color-mix(in srgb,rgb(var(--mark)),#000 var(--dot-mix))}
 
-/* Traitement */
-.run{position:absolute;inset:0;z-index:45;background:var(--background);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:40px}
-.spin{width:36px;height:36px;border-radius:99px;border:2px solid rgb(var(--tint)/.12);
+.field{
+  width:100%;padding:11px 0;border:0;border-bottom:1px solid var(--border);
+  background:none;color:var(--foreground);font:inherit;font-size:13px;
+  font-family:"JetBrains Mono",monospace;user-select:text;border-radius:0;
+}
+.field::placeholder{color:var(--faint);font-family:"Space Grotesk",sans-serif}
+.field:focus{outline:none;border-bottom-color:var(--accent-strong)}
+
+.empty{display:flex;flex-direction:column;gap:8px;padding:34px 20px 10px}
+
+/* --- Traitement, message ------------------------------------------------- */
+.run{position:absolute;inset:0;z-index:45;background:var(--paper);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px}
+.spin{width:30px;height:30px;border-radius:99px;border:2px solid rgb(var(--tint)/.1);
   border-top-color:var(--primary);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.bar{width:220px;height:3px;border-radius:99px;background:rgb(var(--tint)/.08);overflow:hidden}
-.bar i{display:block;height:100%;background:var(--primary);border-radius:99px;transition:width .22s linear}
+.bar{width:200px;height:2px;background:rgb(var(--tint)/.1);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--primary);transition:width .22s linear}
 
-/* Toast */
 .toast{
-  position:absolute;left:20px;right:20px;bottom:96px;z-index:80;
-  padding:12px 15px;border-radius:14px;background:var(--surface);border:1px solid var(--border);
-  box-shadow:var(--shadow-panel);font-size:12.5px;font-weight:600;color:var(--strong);
-  text-align:center;opacity:0;transform:translateY(10px);transition:opacity .22s,transform .22s;
-  pointer-events:none;
+  position:absolute;left:20px;right:20px;top:60px;z-index:80;
+  padding:12px 14px;border-radius:10px;background:var(--sheet);
+  border:1px solid var(--border);font-size:12.5px;font-weight:600;color:var(--strong);
+  text-align:center;opacity:0;transform:translateY(-8px);
+  transition:opacity .22s,transform .22s;pointer-events:none;
 }
 .toast.on{opacity:1;transform:translateY(0)}
 
@@ -439,10 +389,9 @@ h1{
       <p class="eyebrow">Maquette — Filtre IA</p>
       <h1>Pseudonymizer, au doigt</h1>
       <p class="lede">
-        Le logiciel de bureau tient en trois colonnes fixes et une fenêtre de 1180 px minimum.
-        Voici le même flux redessiné pour un écran de 390 px et un pouce. Les deux modes
-        deviennent une barre flottante en bas ; le reste suit — pile de navigation, feuilles à
-        paliers, sélection tactile. Prototype réel : tout ce qui est ci-contre répond.
+        Le même flux que le logiciel de bureau, ramené à 390 px et à un pouce. Les deux modes
+        descendent dans une barre flottante — seule ombre de l'interface, comme au bureau ; le
+        reste tient en filets d'un pixel. Prototype réel : tout ce qui est ci-contre répond.
       </p>
     </div>
 
@@ -465,6 +414,7 @@ h1{
         <div class="shift"><b>Panneau latéral de 360 px</b><span>Feuille à trois paliers par-dessus le document</span></div>
         <div class="shift"><b>Colonne de modes</b><span>Barre flottante à deux onglets : même ombre, même détachement</span></div>
         <div class="shift"><b>Survols et infobulles</b><span>États d'appui, cibles de 44 px, feuilles au lieu d'infobulles</span></div>
+        <div class="shift"><b>Cartes empilées</b><span>Filets d'un pixel : la doctrine du bureau, tenue jusqu'au bout</span></div>
       </div>
     </div>
   </div>
@@ -500,11 +450,10 @@ h1{
       </div>
     </div>
 
-    <div class="gestures">
-      <span class="gest"><b>Appui</b> sur un mot — le capturer</span>
-      <span class="gest"><b>Appui long</b> — l'entité entière</span>
-      <span class="gest"><b>Glissement</b> sur la feuille — trois paliers</span>
-    </div>
+    <p class="gestures">
+      <b>Appui</b> : capturer un mot · <b>Appui long</b> : l'entité entière ·
+      <b>Glissement</b> : les trois paliers de la feuille
+    </p>
   </div>
 </div>
 
@@ -622,8 +571,18 @@ function entityAt(p,i){
   const toks = T()[p];
   const isCap = k => toks[k] && toks[k].word && /^[\p{Lu}]/u.test(toks[k].text);
   const isGap = k => toks[k] && !toks[k].word && /^[  '’-]+$/.test(toks[k].text);
+  // Une majuscule de début de phrase n'appartient pas à l'entité qui suit :
+  // sans cela, « SahelTech Industries » devenait « Entre SahelTech Industries ».
+  const opensSentence = (k) => {
+    if(k === 0) return true;
+    for(let j = k - 1; j >= 0 && !toks[j].word; j--){
+      if(/[.!?]/.test(toks[j].text)) return true;
+    }
+    return false;
+  };
+
   let from = i, to = i;
-  while(from >= 2 && isGap(from-1) && isCap(from-2)) from -= 2;
+  while(from >= 2 && isGap(from-1) && isCap(from-2) && !opensSentence(from-2)) from -= 2;
   while(to <= toks.length-3 && isGap(to+1) && isCap(to+2)) to += 2;
   if(!isCap(i)) return {from:i, to:i};
   return {from, to};
@@ -692,28 +651,6 @@ function renumber(){
 /* =========================================================================
    Icônes
    ========================================================================= */
-const svg = (d,extra) => '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+d+(extra||"")+'</svg>';
-const ICON = {
-  back:  svg('<path d="M15 5l-7 7 7 7"/>'),
-  chev:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chevron" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>',
-  close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
-  home:  svg('<path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/>'),
-  folder:svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
-  gear:  svg('<circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M21 12h-2.2M5.2 12H3M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6M18.4 18.4l-1.6-1.6M7.2 7.2L5.6 5.6"/>'),
-  doc:   svg('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>'),
-  sheetf:svg('<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 10v10"/>'),
-  shield:svg('<path d="M12 3l7 3v5.5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/><path d="M9.2 12.2l2 2 3.6-3.8"/>'),
-  share: svg('<path d="M12 15V4"/><path d="M8.5 7.5L12 4l3.5 3.5"/><path d="M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/>'),
-  save:  svg('<path d="M12 4v11"/><path d="M8.5 11.5L12 15l3.5-3.5"/><path d="M5 15v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/>'),
-  camera:svg('<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2L9 5h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.5" r="3.2"/>'),
-  clock: svg('<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 1.8"/>'),
-  plus:  svg('<path d="M12 5v14M5 12h14"/>'),
-  check: svg('<path d="M5 12.5l4.5 4.5L19 7"/>'),
-  book:  svg('<path d="M5 5.5A1.5 1.5 0 0 1 6.5 4H19v14H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 1 6.5 18H19v2H6.5A1.5 1.5 0 0 1 5 19.5z"/>'),
-  info:  svg('<circle cx="12" cy="12" r="8"/><path d="M12 11v5"/><path d="M12 8.2h.01"/>'),
-  refresh:svg('<path d="M19 8a7.5 7.5 0 1 0 1 5"/><path d="M20 4v4.5h-4.5"/>'),
-  sun:   svg('<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>'),
-};
 </script>
 
 <script>
@@ -727,83 +664,72 @@ const NAVPILL = () => '<nav class="navpill">' + [
   '<button data-act="tab" data-v="'+id+'" aria-selected="'+(S.mode===id)+'">' +
   '<span class="i">'+i+'</span><span class="t">'+label+'</span></button>').join("") + '</nav>';
 
-const backHead = (title, sub, right) =>
-  '<header class="head">' +
-    '<button class="iconbtn" data-act="back" aria-label="Retour">'+ICON.back+'</button>' +
-    '<div class="title">'+esc(title)+(sub?'<span class="sub">'+esc(sub)+'</span>':'')+'</div>' +
-    (right || '<span></span>') +
-  '</header>';
+/* En-tête d'un écran poussé : le retour en libellé, pas en chevron. */
+const backHead = (right, title) =>
+  '<header class="head"><div class="headrow">' +
+    '<button class="textbtn" data-act="back">Retour</button>' +
+    (right ? '<span class="right">'+right+'</span>' : "") +
+  '</div><h1 class="big">'+esc(title)+'</h1></header>';
 
-/* --- Racine d'onglet : le dépôt du mode, puis le contexte ----------------- */
+const rows = (items) => '<div class="list">' + items.join("") + '</div>';
+
+/* --- Racine d'onglet ------------------------------------------------------ */
 function renderTabRoot(){
   const pseudo = S.mode === "pseudo";
   const d = S.picked.doc, r = S.picked.registry;
   const ready = !!d && (pseudo || !!r);
   const recents = pseudo
-    ? [["Exercice 1.pdf","PDF","Ouvert il y a 2 h · 6 termes"],
-       ["Convention_PNUD.docx","DOCX","Brouillon · 11 termes"],
-       ["Budget_T3_2026.xlsx","XLSX","Pseudonymisé hier · 24 termes"]]
-    : [["Exercice 1_pseudonymise.pdf","PDF","Registre dans le projet actif"],
-       ["Convention_PNUD_pseudo.docx","DOCX","Registre_PNUD.xlsx · hier"]];
+    ? [["Exercice 1.pdf","il y a 2 h"],["Convention_PNUD.docx","hier"],["Budget_T3_2026.xlsx","hier"]]
+    : [["Exercice 1_pseudonymise.pdf","registre en projet"],["Convention_PNUD_pseudo.docx","hier"]];
 
   return (
-  '<header class="head" style="grid-template-columns:1fr auto auto;text-align:left">' +
-    '<div><div class="lbl">Filtre IA</div>' +
-    '<div class="big" style="font-size:24px;margin-top:2px">Pseudonymizer</div></div>' +
-    '<button class="iconbtn filled" data-act="open" data-v="projects" aria-label="Projets">'+ICON.folder+'</button>' +
-    '<button class="iconbtn filled" data-act="open" data-v="settings" aria-label="Réglages">'+ICON.gear+'</button>' +
+  '<header class="head">' +
+    '<div class="headrow">' +
+      '<span class="lbl">Pseudonymizer</span>' +
+      '<span class="right">' +
+        '<button class="textbtn" data-act="open" data-v="projects">Projets</button>' +
+        '<button class="textbtn" data-act="open" data-v="settings">Réglages</button>' +
+      '</span>' +
+    '</div>' +
+    '<h1 class="big">'+(pseudo?"Le document à pseudonymiser":"Le document à restaurer")+'</h1>' +
   '</header>' +
 
   '<div class="body pad tabroot">' +
-    '<p class="lbl accent" style="margin:8px 0 0">'+(pseudo?"Document source":"Document à restaurer")+'</p>' +
-    '<h2 class="big" style="margin:8px 0 0">'+(pseudo?"Le document à pseudonymiser":"Le document revenu du traitement")+'</h2>' +
-    '<p class="p" style="margin:9px 0 18px">'+(pseudo
-      ? "Les données structurées — e-mails, téléphones, montants, identifiants — sont pré-détectées. Vous complétez la sélection au doigt."
-      : "Ses pseudonymes reprendront les valeurs d’origine, lues dans le registre. Le document n’a pas besoin d’être identique à celui de départ.")+'</p>' +
+    '<p class="p" style="margin:0 0 22px">'+(pseudo
+      ? "Les e-mails, téléphones, montants et identifiants sont pré-détectés. Vous complétez la sélection au doigt."
+      : "Les pseudonymes reprendront les valeurs d’origine, lues dans le registre.")+'</p>' +
 
-    '<button class="dropzone'+(d?" loaded":"")+'" data-act="pick-doc">' +
-      (d
-        ? ICON.doc + '<span class="t">'+esc(d)+'</span><span class="lbl accent">Chargé</span><span class="a">Remplacer le fichier</span>'
-        : ICON.doc + '<span class="t">Choisir un document</span><span class="lbl">PDF · DOCX · XLSX · TXT</span><span class="a">Fichiers, photos ou numérisation</span>') +
+    '<button class="band" data-act="pick-doc">' +
+      (d ? '<span class="t">'+esc(d)+'</span><span class="lbl accent">Chargé</span><span class="a">Remplacer</span>'
+         : '<span class="t">Choisir un document</span><span class="lbl">PDF · DOCX · XLSX · TXT</span>' +
+           '<span class="a">Fichiers, photos ou numérisation</span>') +
     '</button>' +
 
-    '<div class="card" style="margin-top:12px">' +
-      '<button class="row" data-act="pick-reg">' + ICON.sheetf +
-        '<span class="grow"><span class="t">Registre de correspondances</span>' +
-        '<span class="d">'+(r ? esc(r)+" · chargé" : (pseudo ? "Facultatif · .xlsx" : "Requis pour restaurer"))+'</span></span>' +
-        '<span class="'+(r?"lbl accent":"fmt")+'">'+(r?"OK":"Ajouter")+'</span>' +
-      '</button>' +
+    '<button class="row" data-act="pick-reg" style="border-top:0">' +
+      '<span class="grow"><span class="t">Registre de correspondances</span></span>' +
+      '<span class="v'+(r?" accent":"")+'">'+(r ? "Chargé" : (pseudo ? "Facultatif" : "Requis"))+'</span>' +
+    '</button>' +
+    (r ? '<p class="num" style="margin:-4px 0 0">'+esc(r)+'</p>' : "") +
+
+    (d && !ready ? '<p class="p" style="margin:16px 0 0;font-size:12px">Ajoutez le registre pour pouvoir restaurer ce document.</p>' : "") +
+    (d ? '<button class="cta" style="margin-top:18px"'+(ready?"":" disabled")+' data-act="confirm">' +
+           (pseudo ? "Continuer vers la sélection" : "Continuer vers la restauration") + '</button>'
+       : '<button class="txtcta" data-act="sample" style="margin-top:6px">Charger le document d’exemple</button>') +
+
+    '<div class="section"><span class="lbl">Projet</span>' +
+      rows(['<button class="row" data-act="open" data-v="projects">' +
+        '<span class="grow"><span class="t">'+esc(S.project.name)+'</span></span>' +
+        '<span class="v accent">'+S.project.terms+' paires</span></button>']) +
     '</div>' +
 
-    (d && !ready
-      ? '<p class="p" style="margin:14px 2px 0;text-align:center;font-size:12px">Ajoutez le registre pour pouvoir restaurer ce document.</p>' : "") +
-    (d
-      ? '<button class="cta" style="margin-top:14px"'+(ready?"":" disabled")+' data-act="confirm">' +
-          (pseudo ? "Continuer vers la sélection" : "Continuer vers la restauration") + '</button>'
-      : '<button class="row" data-act="sample" style="margin-top:10px;justify-content:center">' +
-          '<span class="lbl">ou charger le document d’exemple</span></button>') +
-
-    '<div class="section">' +
-      '<p class="lbl">Projet</p>' +
-      '<button class="row card" data-act="open" data-v="projects">' +
-        '<span class="grow"><span class="t">'+esc(S.project.name)+'</span>' +
-        '<span class="d" style="color:var(--accent-strong);font-family:\'JetBrains Mono\',monospace">' +
-          plural(S.project.terms,"correspondance")+' en mémoire</span></span>'+ICON.chev+
-      '</button>' +
-    '</div>' +
-
-    '<div class="section">' +
-      '<p class="lbl">'+(pseudo?"Documents récents":"Documents pseudonymisés")+'</p>' +
-      '<div class="card">' + recents.map(([nm,f,dd]) =>
+    '<div class="section"><span class="lbl">'+(pseudo?"Documents récents":"Documents pseudonymisés")+'</span>' +
+      rows(recents.map(([nm,when]) =>
         '<button class="row" data-act="recent" data-v="'+esc(nm)+'">' +
-          '<span class="fmt">'+f+'</span>' +
-          '<span class="grow"><span class="t">'+esc(nm)+'</span><span class="d">'+esc(dd)+'</span></span>' +
-          ICON.chev + '</button>').join("") + '</div>' +
+          '<span class="grow"><span class="t">'+esc(nm)+'</span></span>' +
+          '<span class="v">'+esc(when)+'</span></button>')) +
     '</div>' +
 
-    '<div class="section"><div class="local">'+ICON.shield+
-      '<span>Traitement local. Le document, le registre et les projets restent sur l’appareil.</span>' +
-    '</div></div>' +
+    '<p class="p" style="margin:26px 0 0;font-size:12px">Traitement local. Le document, le registre et les projets restent sur l’appareil.</p>' +
   '</div>' + NAVPILL());
 }
 
@@ -849,20 +775,20 @@ function renderWork(){
   const pseudo = S.mode === "pseudo";
   const done = S.status === "done";
   const result = done && S.view === "result";
-  const head = '<header class="head">' +
-    '<button class="iconbtn" data-act="back" aria-label="Fermer le document">'+ICON.close+'</button>' +
-    '<div class="title">'+esc(S.picked.doc || DOCS[S.mode].file)+
-      '<span class="sub">'+(pseudo?"Pseudonymisation":"Restauration")+'</span></div>' +
-    '<span></span></header>';
+
+  const head = '<header class="head"><div class="headrow">' +
+      '<button class="textbtn" data-act="back">Fermer</button>' +
+      '<span class="lbl">'+(pseudo?"Pseudonymisation":"Restauration")+'</span>' +
+    '</div><p class="filename">'+esc(S.picked.doc || DOCS[S.mode].file)+'</p></header>';
 
   const strip = done
-    ? '<div class="hint" style="padding:8px 20px"><div class="seg">' +
+    ? '<div class="views">' +
         '<button data-act="view" data-v="source" aria-pressed="'+(!result)+'">Document</button>' +
         '<button data-act="view" data-v="result" aria-pressed="'+result+'">'+(pseudo?"Pseudonymisé":"Restauré")+'</button>' +
-      '</div></div>'
-    : '<div class="hint">'+(pseudo
-        ? "Appuyez un mot pour le capturer · maintenez pour prendre l’entité entière"
-        : "Correspondances fournies par le registre · appuyez un pseudonyme pour l’inspecter")+'</div>';
+      '</div>'
+    : '<p class="hint">'+(pseudo
+        ? "Appuyez un mot pour le capturer · maintenez pour l’entité entière"
+        : "Correspondances fournies par le registre · appuyez un pseudonyme pour l’inspecter")+'</p>';
 
   return head + strip + '<div class="body" id="docBody">' + renderDocBody() + '</div>' +
     (S.status === "running" ? renderRunning() : "");
@@ -878,50 +804,50 @@ function renderRunning(){
 /* --- Écrans poussés depuis l'en-tête -------------------------------------- */
 function renderProjects(){
   const list = [
-    [S.project.name, "12 correspondances · 3 documents", true],
-    ["Audit MEF 2025", "38 correspondances · 7 documents", false],
-    ["Marchés publics — lot 4", "5 correspondances · 1 document", false],
+    [S.project.name, "3 documents", 12, true],
+    ["Audit MEF 2025", "7 documents", 38, false],
+    ["Marchés publics — lot 4", "1 document", 5, false],
   ];
   return (
-  backHead("Projets", "Mémoire des correspondances",
-    '<button class="iconbtn filled" data-act="new-project" aria-label="Nouveau projet">'+ICON.plus+'</button>') +
+  backHead('<button class="textbtn" data-act="new-project">Nouveau</button>', "Projets") +
   '<div class="body pad">' +
-    '<p class="p" style="margin:6px 0 14px">Un projet retient les paires établies. Il rend la restauration possible sans avoir à retrouver le fichier de registre.</p>' +
-    '<div class="card">' + list.map(([nm,d,active]) =>
+    '<p class="p" style="margin:0 0 22px">Un projet retient les paires établies. Il rend la restauration possible sans avoir à retrouver le fichier de registre.</p>' +
+    rows(list.map(([nm,d,n,active]) =>
       '<button class="row" data-act="select-project" data-v="'+esc(nm)+'">' +
-        '<span class="grow"><span class="t">'+esc(nm)+'</span><span class="d">'+esc(d)+'</span></span>' +
-        (active ? '<span style="color:var(--accent-strong)">'+ICON.check+'</span>' : ICON.chev) +
-      '</button>').join("") + '</div>' +
-    '<button class="cta ghost" data-act="new-project" style="margin-top:14px">Nouveau projet</button>' +
+        '<span class="grow"><span class="t">'+esc(nm)+'</span>' +
+        '<span class="d">'+plural(n,"correspondance")+' · '+d+'</span></span>' +
+        (active ? '<span class="v accent">Actif</span>' : "") +
+      '</button>')) +
   '</div>');
 }
 
 function renderSettings(){
   const dark = document.getElementById("phone").dataset.app === "dark";
   return (
-  backHead("Réglages", "Version 0.1.5") +
+  backHead("", "Réglages") +
   '<div class="body pad">' +
-    '<p class="lbl" style="margin:8px 0 8px 2px">Apparence</p>' +
-    '<div class="card" style="padding:10px"><div class="seg">' +
-      '<button data-act="app-theme" data-v="light" aria-pressed="'+(!dark)+'">Clair</button>' +
-      '<button data-act="app-theme" data-v="dark" aria-pressed="'+dark+'">Sombre</button>' +
-    '</div></div>' +
-
-    '<p class="lbl" style="margin:22px 0 8px 2px">Aide</p>' +
-    '<div class="card">' +
-      '<button class="row" data-act="toast" data-v="Guide de démarrage relancé">'+ICON.book+
-        '<span class="grow"><span class="t">Revoir le guide de démarrage</span>' +
-        '<span class="d">Quatre étapes, sur le document d’exemple</span></span>'+ICON.chev+'</button>' +
-      '<button class="row" data-act="toast" data-v="Pseudonymizer 0.1.5 — Filtre IA">'+ICON.info+
-        '<span class="grow"><span class="t">À propos</span><span class="d">Filtre IA · 0.1.5</span></span>'+ICON.chev+'</button>' +
-      '<button class="row" data-act="toast" data-v="Vous avez la dernière version">'+ICON.refresh+
-        '<span class="grow"><span class="t">Mise à jour</span><span class="d">À jour</span></span>' +
-        '<span class="lbl accent">0.1.5</span></button>' +
+    '<div class="section" style="margin-top:2px"><span class="lbl">Apparence</span>' +
+      '<div class="opts" style="padding:0 0 8px">' +
+        '<button class="opt" data-act="app-theme" data-v="light" aria-pressed="'+(!dark)+'" style="--mark:143 227 176">Clair</button>' +
+        '<button class="opt" data-act="app-theme" data-v="dark" aria-pressed="'+dark+'" style="--mark:143 227 176">Sombre</button>' +
+      '</div>' +
     '</div>' +
 
-    '<div class="section"><div class="local">'+ICON.shield+
-      '<span>L’application ne demande aucune permission réseau. Rien n’est envoyé, à aucun moment.</span>' +
-    '</div></div>' +
+    '<div class="section"><span class="lbl">Aide</span>' +
+      rows([
+        '<button class="row" data-act="toast" data-v="Guide de démarrage relancé">' +
+          '<span class="grow"><span class="t">Revoir le guide de démarrage</span>' +
+          '<span class="d">Quatre étapes, sur le document d’exemple</span></span></button>',
+        '<button class="row" data-act="toast" data-v="Pseudonymizer 0.1.5 — Filtre IA">' +
+          '<span class="grow"><span class="t">À propos</span></span>' +
+          '<span class="v">Filtre IA</span></button>',
+        '<button class="row" data-act="toast" data-v="Vous avez la dernière version">' +
+          '<span class="grow"><span class="t">Mise à jour</span></span>' +
+          '<span class="v accent">0.1.5 · à jour</span></button>',
+      ]) +
+    '</div>' +
+
+    '<p class="p" style="margin:26px 0 0;font-size:12px">L’application ne demande aucune permission réseau. Rien n’est envoyé, à aucun moment.</p>' +
   '</div>');
 }
 
@@ -934,12 +860,6 @@ const SCREENS = {
 };
 </script>
 
-<style>
-.phone .field{user-select:text}
-.phone button.termrow{width:100%;text-align:left}
-.phone button.termrow:active{background:rgb(var(--tint)/.05);transform:none}
-.phone .sheet-head .num{flex:none}
-</style>
 <script>
 /* =========================================================================
    Coque : pile d'écrans, feuilles, gestes
@@ -952,8 +872,8 @@ const toastEl= document.getElementById("toast");
 
 const dockHost = document.createElement("div");
 const modalHost = document.createElement("div");
-dockHost.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:0";
-modalHost.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:2";
+dockHost.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:1";
+modalHost.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:3";
 scrim.style.zIndex = "1";
 layer.insertBefore(dockHost, scrim);
 layer.appendChild(modalHost);
@@ -1028,7 +948,7 @@ const MODAL = {el:null, h:0, id:null};
 
 function sheetHeights(){
   const H = phone.clientHeight;
-  return {H, full:Math.round(H*.86), half:Math.round(H*.52), peek:80};
+  return {H, full:Math.round(H*.86), half:Math.round(H*.52), peek:64};
 }
 function openDock(){
   const {full, peek} = sheetHeights();
@@ -1082,6 +1002,7 @@ function openModal(id, props){
   requestAnimationFrame(() => {
     MODAL.el.classList.add("settled");
     MODAL.el.style.transform = "translateY(0)";
+    scrim.style.zIndex = "2";   // devant la feuille des correspondances
     scrim.classList.add("on");
   });
   bindDrag(MODAL.el, MODAL, true);
@@ -1093,6 +1014,7 @@ function closeModal(){
   MODAL.el = null; MODAL.id = null;
   setTimeout(() => { if(modalHost.contains(el)) modalHost.innerHTML = ""; }, 320);
   scrim.classList.remove("on");
+  scrim.style.zIndex = "1";
   if(DOCK.el) setDockVisible(DOCK.vis);
   if(S.draft){ S.draft = null; repaintDoc(); }
 }
@@ -1146,22 +1068,19 @@ function bindDrag(el, ref, dismissible){
 function renderTermsSheet(){
   const pseudo = S.mode === "pseudo";
   const n = S.terms.length;
-  const rows = n ? S.terms.map(t =>
+  const list = n ? S.terms.map(t =>
     '<button class="termrow" data-act="term" data-id="'+t.id+'">' +
       '<span class="l1">' +
         '<span class="dot" style="--mark:'+rgbOf(t.type)+'"></span>' +
         '<span class="tx">'+esc(t.text)+'</span>' +
-        '<span class="num" style="'+(t.hits.length?"":"color:var(--destructive)")+'">' +
-          plural(t.hits.length,"occurrence") +
-          (t.fromRegistry ? " · registre" : t.auto ? " · auto" : "") + '</span>' +
+        '<span class="num"'+(t.hits.length?"":' style="color:var(--destructive)"')+'>' +
+          t.hits.length + '×</span>' +
       '</span>' +
-      '<span class="l2"><span class="tag">'+labelOf(t.type)+'</span>' +
-      '<span class="pmono">'+esc(t.pseudo)+'</span></span>' +
+      '<span class="l2">'+labelOf(t.type)+' · <b>'+esc(t.pseudo)+'</b>' +
+        (t.fromRegistry ? " · registre" : t.auto ? " · auto" : "") + '</span>' +
     '</button>').join("")
-    : '<div class="empty">' +
-        '<p class="h2" style="font-size:15px">Aucune correspondance</p>' +
-        '<p class="p">Appuyez un mot du document pour créer la première. Toutes ses occurrences seront traitées.</p>' +
-      '</div>';
+    : '<div class="empty"><p class="p" style="color:var(--dim);font-weight:600">Aucune correspondance</p>' +
+      '<p class="p">Appuyez un mot du document pour créer la première. Toutes ses occurrences seront traitées.</p></div>';
 
   return (
   '<div class="sheet" data-sheet="terms">' +
@@ -1169,15 +1088,15 @@ function renderTermsSheet(){
     '<div class="sheet-head">' +
       '<span class="t">Correspondances</span>' +
       '<span class="num">'+plural(n,"terme")+'</span>' +
-      '<button class="chip" data-act="run" aria-pressed="true">Traiter</button>' +
+      '<button class="textbtn" data-act="run" style="color:var(--accent-strong);min-height:0">Traiter</button>' +
     '</div>' +
     '<div class="sheet-body">' +
       (pseudo ?
-      '<div style="display:flex;gap:8px;padding:16px 18px 12px">' +
+      '<div class="pad20" style="display:flex;gap:14px;align-items:center;padding:6px 20px 14px">' +
         '<input class="field" id="addField" placeholder="Rechercher ou ajouter un terme…" aria-label="Ajouter un terme">' +
-        '<button class="chip" data-act="add-text" aria-pressed="true" style="padding:0 14px">Ajouter</button>' +
+        '<button class="textbtn" data-act="add-text" style="color:var(--accent-strong);min-height:0">Ajouter</button>' +
       '</div>' : "") +
-      rows +
+      list +
     '</div>' +
     '<div class="sheet-foot">' +
       '<button class="cta" data-act="run">'+(pseudo?"Pseudonymiser le document":"Restaurer le document")+'</button>' +
@@ -1185,12 +1104,14 @@ function renderTermsSheet(){
   '</div>');
 }
 
-const typeChips = (current, locked) => locked
-  ? '<div style="padding:0 18px 10px"><span class="chip" aria-pressed="true">' +
-      '<span class="dot" style="--mark:'+rgbOf(current)+'"></span>'+labelOf(current)+'</span></div>'
-  : '<div class="chips" style="padding:0 18px 10px">' +
-      TYPES.map(t => '<button class="chip" data-act="type" data-v="'+t.value+'" aria-pressed="'+(t.value===current)+'">' +
-        '<span class="dot" style="--mark:'+FAMILIES[t.family].rgb+'"></span>'+t.label+'</button>').join("") + '</div>';
+/* Le type est un choix, pas une action : ni pastille pleine, ni vert. */
+const typeOpts = (current, locked) => locked
+  ? '<p class="pad20" style="padding-bottom:16px;font-size:13px;font-weight:700;color:var(--strong)">' +
+      labelOf(current) + '</p>'
+  : '<div class="opts">' + TYPES.map(t =>
+      '<button class="opt" data-act="type" data-v="'+t.value+'" aria-pressed="'+(t.value===current)+'" ' +
+      'style="--mark:'+FAMILIES[t.family].rgb+'">' +
+      '<span class="dot" style="--mark:'+FAMILIES[t.family].rgb+'"></span>'+t.label+'</button>').join("") + '</div>';
 
 function renderModal(id, props){
   if(id === "draft"){
@@ -1199,19 +1120,18 @@ function renderModal(id, props){
     '<div class="sheet">' +
       '<div class="grab"><i></i></div>' +
       '<div class="sheet-head"><span class="t">Nouvelle correspondance</span>' +
-        '<button class="iconbtn" data-act="cancel-draft" aria-label="Annuler">'+ICON.close+'</button></div>' +
-      '<div style="padding:0 18px 4px">' +
+        '<button class="textbtn" data-act="cancel-draft" style="min-height:0">Annuler</button></div>' +
+      '<div class="pad20" style="padding-bottom:14px">' +
         '<div style="display:flex;align-items:center;gap:9px">' +
           '<span class="dot" style="--mark:'+rgbOf(d.type)+'"></span>' +
           '<span style="font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--strong)">'+esc(d.text)+'</span>' +
         '</div>' +
-        '<p class="num" style="margin:6px 0 0 16px">'+plural(d.count,"occurrence")+' dans le document · '+famOf(d.type)+'</p>' +
+        '<p class="num" style="margin:7px 0 0 16px">'+plural(d.count,"occurrence")+' · '+famOf(d.type)+'</p>' +
       '</div>' +
-      '<p class="lbl" style="padding:14px 18px 8px">Type de donnée</p>' +
-      typeChips(d.type) +
+      '<p class="lbl pad20" style="display:block;padding-bottom:10px">Type de donnée</p>' +
+      typeOpts(d.type) +
       '<div class="sheet-foot">' +
         '<button class="cta" data-act="create">Créer la correspondance</button>' +
-        '<button class="cta ghost" data-act="cancel-draft">Annuler</button>' +
       '</div>' +
     '</div>');
   }
@@ -1222,23 +1142,22 @@ function renderModal(id, props){
     '<div class="sheet">' +
       '<div class="grab"><i></i></div>' +
       '<div class="sheet-head"><span class="t">Correspondance</span>' +
-        '<button class="iconbtn" data-act="close-sheet" aria-label="Fermer">'+ICON.close+'</button></div>' +
-      '<div style="padding:0 18px 4px">' +
+        '<button class="textbtn" data-act="close-sheet" style="min-height:0">Terminé</button></div>' +
+      '<div class="pad20" style="padding-bottom:14px">' +
         '<div style="display:flex;align-items:center;gap:9px">' +
           '<span class="dot" style="--mark:'+rgbOf(t.type)+'"></span>' +
           '<span style="font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--strong)">'+esc(t.text)+'</span>' +
         '</div>' +
-        '<p class="num" style="margin:6px 0 0 16px">'+plural(t.hits.length,"occurrence")+
-          (t.fromRegistry ? " · fourni par le registre" : t.auto ? " · pré-détecté" : "")+'</p>' +
+        '<p class="num" style="margin:7px 0 0 16px">'+plural(t.hits.length,"occurrence")+
+          (t.fromRegistry ? " · fournie par le registre" : t.auto ? " · pré-détectée" : "")+'</p>' +
       '</div>' +
-      '<p class="lbl" style="padding:14px 18px 8px">Type de donnée</p>' +
-      typeChips(t.type, t.fromRegistry) +
-      '<p class="lbl" style="padding:4px 18px 8px">Pseudonyme</p>' +
-      '<div style="padding:0 18px 4px"><input class="field" id="pseudoField" value="'+esc(t.pseudo)+'"' +
+      '<p class="lbl pad20" style="display:block;padding-bottom:10px">Type de donnée</p>' +
+      typeOpts(t.type, t.fromRegistry) +
+      '<p class="lbl pad20" style="display:block;padding-bottom:2px">Pseudonyme</p>' +
+      '<div class="pad20"><input class="field" id="pseudoField" value="'+esc(t.pseudo)+'"' +
         (t.fromRegistry ? " readonly" : "") + ' aria-label="Pseudonyme"></div>' +
       '<div class="sheet-foot">' +
-        '<button class="cta ghost" data-act="close-sheet">Terminé</button>' +
-        '<button class="cta danger" data-act="remove" data-id="'+t.id+'">Retirer la correspondance</button>' +
+        '<button class="txtcta danger" data-act="remove" data-id="'+t.id+'">Retirer la correspondance</button>' +
       '</div>' +
     '</div>');
   }
@@ -1246,58 +1165,56 @@ function renderModal(id, props){
   if(id === "picker"){
     const doc = props.kind === "doc";
     const items = doc
-      ? [[ICON.folder,"Fichiers","Parcourir l’appareil","Exercice 1.pdf"],
-         [ICON.camera,"Numériser un document","Appareil photo","Scan 2026-09-08.pdf"],
-         [ICON.clock,"Récents","Exercice 1.pdf · il y a 2 h","Exercice 1.pdf"]]
-      : [[ICON.folder,"Fichiers","Un classeur .xlsx","Registre_Exercice 1.xlsx"],
-         [ICON.sheetf,"Depuis le projet","« "+S.project.name+" » · 12 correspondances","Projet « "+S.project.name+" »"],
-         [ICON.clock,"Récents","Registre_Exercice 1.xlsx · hier","Registre_Exercice 1.xlsx"]];
+      ? [["Fichiers","Parcourir l’appareil","Exercice 1.pdf"],
+         ["Numériser un document","Appareil photo","Scan 2026-09-08.pdf"],
+         ["Récents","Exercice 1.pdf · il y a 2 h","Exercice 1.pdf"]]
+      : [["Fichiers","Un classeur .xlsx","Registre_Exercice 1.xlsx"],
+         ["Depuis le projet","« "+S.project.name+" » · 12 paires","Projet « "+S.project.name+" »"],
+         ["Récents","Registre_Exercice 1.xlsx · hier","Registre_Exercice 1.xlsx"]];
     return (
     '<div class="sheet">' +
       '<div class="grab"><i></i></div>' +
-      '<div class="sheet-head"><span class="t">'+(doc?"Choisir un document":"Choisir le registre")+'</span></div>' +
-      '<div class="sheet-body">' + items.map(([icon,t,d,v]) =>
-        '<button class="row" data-act="picked" data-kind="'+props.kind+'" data-v="'+esc(v)+'">'+icon+
-          '<span class="grow"><span class="t">'+esc(t)+'</span><span class="d">'+esc(d)+'</span></span>'+ICON.chev+
+      '<div class="sheet-head"><span class="t">'+(doc?"Choisir un document":"Choisir le registre")+'</span>' +
+        '<button class="textbtn" data-act="close-sheet" style="min-height:0">Annuler</button></div>' +
+      '<div class="sheet-body pad20" style="padding-bottom:30px">' + items.map(([t,d,v]) =>
+        '<button class="row" data-act="picked" data-kind="'+props.kind+'" data-v="'+esc(v)+'">' +
+          '<span class="grow"><span class="t">'+esc(t)+'</span><span class="d">'+esc(d)+'</span></span>' +
         '</button>').join("") + '</div>' +
-      '<div class="sheet-foot"><button class="cta ghost" data-act="close-sheet">Annuler</button></div>' +
     '</div>');
   }
 
   if(id === "livrables"){
     const pseudo = S.mode === "pseudo";
     const files = pseudo
-      ? [["Exercice 1_pseudonymise.pdf","PDF","214 Ko"],["Registre_Exercice 1.xlsx","XLSX","12 Ko"]]
-      : [["Exercice 1_restaure.pdf","PDF","211 Ko"]];
+      ? [["Exercice 1_pseudonymise.pdf","214 Ko"],["Registre_Exercice 1.xlsx","12 Ko"]]
+      : [["Exercice 1_restaure.pdf","211 Ko"]];
     return (
     '<div class="sheet">' +
       '<div class="grab"><i></i></div>' +
       '<div class="sheet-head"><span class="t">Livrables prêts</span>' +
         '<span class="num">'+plural(files.length,"fichier")+'</span></div>' +
-      '<div class="sheet-body">' + files.map(([n,f,s]) =>
-        '<div class="row"><span class="fmt">'+f+'</span>' +
-          '<span class="grow"><span class="t">'+esc(n)+'</span><span class="d">'+s+'</span></span>' +
-          '<span style="color:var(--accent-strong)">'+ICON.check+'</span></div>').join("") +
-        (pseudo ? '<p class="p" style="padding:12px 18px 4px;font-size:11.5px">Le registre est indispensable pour restaurer le document plus tard. Il est aussi enregistré dans le projet « '+esc(S.project.name)+' ».</p>' : "") +
+      '<div class="sheet-body pad20">' + files.map(([nm,sz]) =>
+        '<div class="row"><span class="grow"><span class="t">'+esc(nm)+'</span></span>' +
+          '<span class="v">'+sz+'</span></div>').join("") +
+        (pseudo ? '<p class="p" style="margin:16px 0 0;font-size:12px">Le registre est indispensable pour restaurer le document plus tard. Il est aussi enregistré dans le projet « '+esc(S.project.name)+' ».</p>' : "") +
       '</div>' +
       '<div class="sheet-foot">' +
         '<button class="cta" data-act="share">Partager</button>' +
-        '<button class="cta ghost" data-act="save">Enregistrer dans Fichiers</button>' +
+        '<button class="txtcta" data-act="save">Enregistrer dans Fichiers</button>' +
       '</div>' +
     '</div>');
   }
 
   if(id === "share"){
-    const targets = ["Mail","Messages","Fichiers","Copier le lien local"];
     return (
     '<div class="sheet">' +
       '<div class="grab"><i></i></div>' +
       '<div class="sheet-head"><span class="t">Partager</span>' +
-        '<span class="num">2 fichiers</span></div>' +
-      '<div class="sheet-body">' + targets.map(t =>
-        '<button class="row" data-act="share-to" data-v="'+esc(t)+'">'+ICON.share+
-          '<span class="grow"><span class="t">'+esc(t)+'</span></span>'+ICON.chev+'</button>').join("") + '</div>' +
-      '<div class="sheet-foot"><button class="cta ghost" data-act="close-sheet">Annuler</button></div>' +
+        '<button class="textbtn" data-act="close-sheet" style="min-height:0">Annuler</button></div>' +
+      '<div class="sheet-body pad20" style="padding-bottom:30px">' +
+        ["Mail","Messages","Fichiers","Copier le lien local"].map(t =>
+        '<button class="row" data-act="share-to" data-v="'+esc(t)+'">' +
+          '<span class="grow"><span class="t">'+esc(t)+'</span></span></button>').join("") + '</div>' +
     '</div>');
   }
   return "";
