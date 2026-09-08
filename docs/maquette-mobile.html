@@ -203,7 +203,7 @@ h1{
 
 .body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .body.pad{padding:0 20px 28px}
-.body.tabroot{display:flex;flex-direction:column;padding:6px 20px 96px}
+.body.tabroot{display:flex;flex-direction:column;padding:6px 20px 104px}
 .body::-webkit-scrollbar{width:0}
 
 .homebar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
@@ -220,12 +220,13 @@ h1{
   background:var(--sheet);border:1px solid var(--border);box-shadow:var(--shadow-nav);
 }
 .pill button{
-  width:54px;height:46px;border-radius:17px;color:var(--dim);
-  display:flex;align-items:center;justify-content:center;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:8px 12px 7px;border-radius:17px;color:var(--dim);
 }
+.pill .n{font-size:10px;font-weight:600;letter-spacing:-.005em;white-space:nowrap}
 .pill button[aria-selected="true"]{background:var(--primary);color:var(--primary-fg)}
 .pill button:active{opacity:.6}
-.pill .mono{font-family:"JetBrains Mono",monospace;font-size:12.5px;font-weight:700;letter-spacing:.03em}
+.pill .mono{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;letter-spacing:.03em;line-height:21px}
 
 /* Bascule de thème, dans le bandeau : un état, pas une action — le vert
    n'y a donc pas sa place. */
@@ -243,6 +244,23 @@ h1{
 }
 .zone[data-on="1"]{background:var(--zone-on)}
 .zone .g{color:var(--faint);opacity:.55;margin-bottom:2px;display:block}
+
+/* Projet actif : même matière que les dépôts, pour que les trois onglets
+   parlent la même langue. */
+.hero{
+  display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  padding:16px;border-radius:22px;background:rgb(var(--tint)/.045);
+}
+.hero .badge{
+  width:48px;height:48px;flex:none;border-radius:16px;background:var(--primary);
+  color:var(--primary-fg);display:flex;align-items:center;justify-content:center;
+  font-family:"JetBrains Mono",monospace;font-size:15px;font-weight:700;letter-spacing:.03em;
+}
+.hero .grow{flex:1;min-width:0}
+.hero .n{display:block;font-size:17px;font-weight:600;letter-spacing:-.02em;
+  color:var(--strong);overflow-wrap:anywhere}
+.hero .m{display:block;font-size:12.5px;color:var(--faint);margin-top:3px}
+.foot{display:flex;justify-content:center;gap:20px;padding:26px 0 6px;margin-top:auto}
 .zone .k{font-size:17px;font-weight:600;letter-spacing:-.02em;color:var(--strong)}
 .zone .s{font-size:12.5px;color:var(--faint)}
 .zone .s.req{color:var(--accent-strong)}
@@ -401,7 +419,7 @@ h1{
       <h1>Pseudonymizer, au doigt</h1>
       <p class="lede">
         Le même flux que le logiciel de bureau, ramené à 390 px et à un pouce. Trois onglets :
-        les deux modes en icônes dans une pastille à gauche, le projet dans une seconde à droite.
+        les deux modes dans une pastille à gauche, le projet dans une seconde à droite.
         L'accueil ne demande plus que deux choses. Prototype réel : tout ce qui est ci-contre répond.
       </p>
     </div>
@@ -415,7 +433,7 @@ h1{
         <div class="shift"><b>Double-clic sur un nom</b><span>Appui long : l'entité entière, « Mariama Diallo » d'un geste</span></div>
         <div class="shift"><b>Barre flottante de sélection</b><span>Feuille basse, dans la zone du pouce</span></div>
         <div class="shift"><b>Panneau latéral de 360 px</b><span>Feuille à trois paliers par-dessus le document</span></div>
-        <div class="shift"><b>Colonne de modes</b><span>Deux pastilles flottantes : les modes en icônes, le projet à part</span></div>
+        <div class="shift"><b>Colonne de modes</b><span>Deux pastilles flottantes : les modes à gauche, le projet à droite</span></div>
         <div class="shift"><b>Bascule de thème en pied de colonne</b><span>Segment clair / sombre en haut à droite du bandeau</span></div>
         <div class="shift"><b>Survols et infobulles</b><span>États d'appui, cibles de 44 px, feuilles au lieu d'infobulles</span></div>
         <div class="shift"><b>Cartes empilées</b><span>Filets d'un pixel partout — sauf les deux dépôts, qui sont l'écran</span></div>
@@ -681,8 +699,8 @@ const GLYPH = {
 /* Trois onglets : les deux modes à gauche, le projet à droite. */
 function NAV(){
   const tab = (id, glyph, label) =>
-    '<button data-act="tab" data-v="'+id+'" aria-selected="'+(S.tab===id)+'" aria-label="'+label+'">' +
-    glyph + '</button>';
+    '<button data-act="tab" data-v="'+id+'" aria-selected="'+(S.tab===id)+'">' +
+    glyph + '<span class="n">'+label+'</span></button>';
   const initials = S.project.name.split(/\s+/).filter(w => /[\p{L}]/u.test(w))
     .slice(0,2).map(w => w[0].toUpperCase()).join("");
   return '<div class="dock">' +
@@ -692,7 +710,8 @@ function NAV(){
     '</div>' +
     '<div class="pill">' +
       '<button data-act="tab" data-v="project" aria-selected="'+(S.tab==="project")+'" ' +
-      'aria-label="Projet — '+esc(S.project.name)+'"><span class="mono">'+esc(initials)+'</span></button>' +
+      'aria-label="Projet — '+esc(S.project.name)+'">' +
+      '<span class="mono">'+esc(initials)+'</span><span class="n">Projet</span></button>' +
     '</div>' +
   '</div>';
 }
@@ -743,39 +762,36 @@ function renderTabRoot(){
 
 /* --- Onglet 03 : le projet, et ce qui n'appartient à aucun flux ------------ */
 function renderProject(){
-  const list = [
-    [S.project.name, "3 documents", 12, true],
-    ["Audit MEF 2025", "7 documents", 38, false],
-    ["Marchés publics — lot 4", "1 document", 5, false],
-  ];
+  const initials = S.project.name.split(/\s+/).filter(w => /[\p{L}]/u.test(w))
+    .slice(0,2).map(w => w[0].toUpperCase()).join("");
+  const others = [["Audit MEF 2025",38],["Marchés publics — lot 4",5]];
+
   return (
   '<header class="head">' +
     '<div class="headrow"><span class="lbl">Filtre IA</span>'+themeToggle()+'</div>' +
     '<h1 class="big">Projet</h1>' +
   '</header>' +
-  '<div class="body pad tabroot" style="display:block;padding-bottom:110px">' +
-    '<p class="p" style="margin:0 0 20px">Un projet retient les paires établies. Il rend la restauration possible sans avoir à retrouver le fichier de registre.</p>' +
-    rows(list.map(([nm,d,n,active]) =>
-      '<button class="row" data-act="select-project" data-v="'+esc(nm)+'">' +
-        '<span class="grow"><span class="t">'+esc(nm)+'</span>' +
-        '<span class="d">'+plural(n,"correspondance")+' · '+d+'</span></span>' +
-        (active ? '<span class="v accent">Actif</span>' : "") +
-      '</button>')) +
-    '<button class="txtcta" data-act="new-project" style="margin-top:6px">Nouveau projet</button>' +
-
-    '<div class="section"><span class="lbl">Aide</span>' +
-      rows([
-        '<button class="row" data-act="toast" data-v="Guide de démarrage relancé">' +
-          '<span class="grow"><span class="t">Revoir le guide de démarrage</span></span></button>',
-        '<button class="row" data-act="toast" data-v="Pseudonymizer 0.1.5 — Filtre IA">' +
-          '<span class="grow"><span class="t">À propos</span></span>' +
-          '<span class="v">Filtre IA</span></button>',
-        '<button class="row" data-act="toast" data-v="Vous avez la dernière version">' +
-          '<span class="grow"><span class="t">Mise à jour</span></span>' +
-          '<span class="v accent">0.1.5</span></button>',
-      ]) +
+  '<div class="body tabroot" style="padding-bottom:110px">' +
+    '<div class="hero">' +
+      '<span class="badge">'+esc(initials)+'</span>' +
+      '<span class="grow"><span class="n">'+esc(S.project.name)+'</span>' +
+      '<span class="m">'+plural(S.project.terms,"paire")+' · '+plural(S.project.docs,"document")+'</span></span>' +
     '</div>' +
-    '<p class="p" style="margin:24px 0 0;font-size:12px">Traitement local. Le document, le registre et les projets restent sur l’appareil.</p>' +
+
+    '<div class="section"><span class="lbl">Autres projets</span>' +
+      rows(others.map(([nm,k]) =>
+        '<button class="row" data-act="select-project" data-v="'+esc(nm)+'">' +
+          '<span class="grow"><span class="t">'+esc(nm)+'</span></span>' +
+          '<span class="v">'+k+' paires</span></button>')) +
+      '<button class="txtcta" data-act="new-project" style="margin-top:4px">Nouveau projet</button>' +
+    '</div>' +
+
+    '<div class="foot">' +
+      '<button class="textbtn" data-act="toast" data-v="Guide de démarrage relancé">Guide</button>' +
+      '<button class="textbtn" data-act="toast" data-v="Pseudonymizer 0.1.5 — Filtre IA">À propos</button>' +
+      '<button class="textbtn" data-act="toast" data-v="Vous avez la dernière version">0.1.5</button>' +
+    '</div>' +
+    '<p class="p" style="text-align:center;font-size:11.5px;padding-bottom:4px">Traitement local — rien ne quitte l’appareil.</p>' +
   '</div>' + NAV());
 }
 
