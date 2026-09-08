@@ -450,14 +450,65 @@ h1{
 .file .n{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--strong);overflow-wrap:anywhere}
 .pad20{padding:0 20px}
 
-.termrow{
-  display:flex;flex-direction:column;gap:5px;width:100%;text-align:left;
-  padding:13px 20px;border-top:1px solid var(--border);
+/* --- Registre : un tableau qui se deplie ---------------------------------
+   Deux lignes libres par terme ne se lisaient pas : l'oeil cherche la valeur,
+   puis son pseudonyme, et rien ne les mettait en regard. Quatre colonnes
+   fixes le font — valeur, pseudonyme, occurrences, chevron — et le detail se
+   deplie sous la ligne, la ou on l'a demande, au lieu d'ouvrir une feuille
+   par-dessus la feuille. */
+.tools{
+  flex:none;display:flex;align-items:center;gap:14px;
+  padding:9px 20px 10px;border-bottom:1px solid var(--border);
 }
-.termrow .l1{display:flex;align-items:baseline;gap:9px}
-.termrow .tx{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--strong);overflow-wrap:anywhere}
-.termrow .l2{padding-left:16px;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--faint)}
-.termrow .l2 b{color:var(--accent-strong);font-weight:500}
+.tools .field{padding:7px 0;border-bottom:0}
+/* .textbtn impose display:flex, qui l'emporte sur [hidden] : le bouton
+   « Ajouter » restait visible alors qu'il n'y avait rien à ajouter. */
+.tools .textbtn{min-height:0;color:var(--accent-strong)}
+.tools .textbtn[hidden]{display:none}
+
+.thead,.tr{display:grid;grid-template-columns:1fr auto auto 16px;gap:10px;align-items:baseline}
+/* L'en-tete tient pendant qu'on fait defiler : un tableau sans ses colonnes
+   redevient une liste des la troisieme ligne. */
+.thead{
+  position:sticky;top:0;z-index:1;background:var(--sheet);
+  padding:10px 20px 8px;border-bottom:1px solid var(--border);
+}
+.thead span{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint)}
+.thead .r{text-align:right}
+
+.trow{border-bottom:1px solid var(--border)}
+.tr{width:100%;text-align:left;padding:12px 20px;min-height:50px}
+.tr .val{display:flex;align-items:baseline;gap:8px;min-width:0}
+.tr .tx{min-width:0;font-size:13.5px;font-weight:600;color:var(--strong);overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* Le pseudonyme se lit sans ses crochets : la colonne le delimite deja. */
+.tr .ps{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:500;
+  color:var(--accent-strong);white-space:nowrap;font-variant-numeric:tabular-nums}
+.tr .oc{text-align:right}
+.tr .oc.none{color:var(--destructive)}
+.chev{align-self:center;display:flex;color:var(--faint);
+  transition:transform .3s cubic-bezier(.32,.72,0,1)}
+.trow[data-open="1"] .chev{transform:rotate(180deg);color:var(--strong)}
+
+/* Le depli se joue sur une seule rangee de grille : de 0fr a 1fr, la hauteur
+   s'anime sans qu'on ait a la mesurer. */
+/* La colonne est bornee : sans minmax(0,1fr), la rangee de types, plus large
+   que l'ecran, etirait le depli a 847 px et poussait « Retirer » dehors. */
+.tfold{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:0fr;
+  transition:grid-template-rows .3s cubic-bezier(.32,.72,0,1)}
+/* `clip` et non `hidden` : un conteneur caché reste défilable, et la mise au
+   point d'un bouton du dépli y faisait glisser tout le contenu. Un conteneur
+   clippé n'est pas défilable — même leçon que le châssis des feuilles. */
+.tfold > .in{overflow:clip;min-height:0}
+.trow[data-open="1"] > .tfold{grid-template-rows:1fr}
+.tdet{padding:0 0 14px}
+.tdet .lbl{display:block;padding:2px 20px 8px}
+.tsrc{padding:0 20px;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--faint)}
+.tacts{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px 0}
+.tacts button{font-size:12.5px;font-weight:600;color:var(--accent-strong);min-height:34px}
+.tacts .danger{color:var(--destructive)}
+.tempty{padding:26px 20px 10px}
 
 /* Type d'une donnée : un choix, pas une action — le vert n'y a pas sa place.
    L'option retenue est soulignée de la teinte de sa famille. */
@@ -522,7 +573,7 @@ h1{
         <div class="shift"><b>Glisser-déposer</b><span>Deux dépôts qui occupent l'écran, sélecteur système, feuille d'action</span></div>
         <div class="shift"><b>Double-clic sur un nom</b><span>Appui long : l'entité entière, « Mariama Diallo » d'un geste</span></div>
         <div class="shift"><b>Barre flottante de sélection</b><span>Feuille basse, dans la zone du pouce</span></div>
-        <div class="shift"><b>Panneau latéral de 360 px</b><span>Feuille à trois paliers par-dessus le document</span></div>
+        <div class="shift"><b>Panneau latéral de 360 px</b><span>Feuille à trois paliers, le registre en tableau dépliable</span></div>
         <div class="shift"><b>Colonne de modes</b><span>Deux pastilles flottantes : les modes à gauche, le projet à droite</span></div>
         <div class="shift"><b>Bascule de thème en pied de colonne</b><span>Segment clair / sombre en haut à droite du bandeau</span></div>
         <div class="shift"><b>Survols et infobulles</b><span>États d'appui, cibles de 44 px, feuilles au lieu d'infobulles</span></div>
@@ -728,6 +779,7 @@ const S = {
   view: "source",
   progress: 0,
   draft: null,
+  open: null, // la ligne dépliée du registre
   hint: true, // la consigne s'efface a la premiere capture
   project: {name:"Convention Sahel 2026", terms:12, docs:3},
 };
@@ -1174,7 +1226,11 @@ function setDockVisible(v, animate){
 function refreshDock(){
   if(!DOCK.el) return;
   const v = DOCK.vis;
+  const corps = document.getElementById("termsBody");
+  const y = corps ? corps.scrollTop : 0;
   dockHost.innerHTML = renderTermsSheet();
+  const suivant = document.getElementById("termsBody");
+  if(suivant && y) suivant.scrollTop = y;
   DOCK.el = dockHost.querySelector(".sheet");
   DOCK.el.style.transform = "none";
   DOCK.el.style.height = v + "px";
@@ -1285,51 +1341,206 @@ function sheetHead(title, sub, act){
   '</div>';
 }
 
+const CHEV = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+  'stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M6 9l6 6 6-6"/></svg>';
+
+/** Le pseudonyme sans ses crochets — comme bareLabel() dans src/lib/types.js. */
+const bare = p => String(p).replace(/^\[/, "").replace(/\]$/, "");
+/* Le type ne figure dans cette ligne que si la rangée de types n'est pas là
+   pour le dire : sinon l'information était écrite deux fois de suite. */
+const srcOf = t => t.fromRegistry
+  ? labelOf(t.type) + " · fournie par le registre"
+  : t.auto ? "Pré-détectée" : "Ajoutée à la main";
+
+/**
+ * Le registre : un tableau.
+ *
+ * Chaque ligne met la valeur et son pseudonyme en regard, dans des colonnes
+ * qui tiennent d'une ligne à l'autre. Le reste — le type, le pseudonyme
+ * modifiable, le retrait — se déplie sous la ligne : ouvrir une feuille
+ * par-dessus la feuille pour changer un type était un étage de trop, et
+ * faisait perdre la liste des yeux.
+ */
 function renderTermsSheet(){
   const pseudo = S.mode === "pseudo";
   const n = S.terms.length;
   const occ = S.terms.reduce((k, t) => k + t.hits.length, 0);
 
-  const list = n ? S.terms.map(t =>
-    '<button class="termrow" data-act="term" data-id="'+t.id+'">' +
-      '<span class="l1">' +
-        '<span class="dot" style="--mark:'+rgbOf(t.type)+'"></span>' +
-        '<span class="tx">'+esc(t.text)+'</span>' +
-        '<span class="num"'+(t.hits.length?"":' style="color:var(--destructive)"')+'>' +
-          t.hits.length + '×</span>' +
-      '</span>' +
-      '<span class="l2">'+labelOf(t.type)+' · <b>'+esc(t.pseudo)+'</b>' +
-        (t.fromRegistry ? " · registre" : t.auto ? " · auto" : "") + '</span>' +
-    '</button>').join("")
-    : '<div class="empty"><p class="p" style="color:var(--dim);font-weight:600">Aucune correspondance</p>' +
-      '<p class="p">Appuyez un mot du document pour créer la première. Toutes ses occurrences seront traitées.</p></div>';
-
   return (
   '<div class="sheet" data-sheet="terms">' +
     '<div class="grab"><i></i></div>' +
-    sheetHead("Correspondances",
-      n ? plural(n,"terme") + " · " + plural(occ,"occurrence") : "Aucun terme pour l’instant",
+    sheetHead("Registre",
+      n ? plural(n,"paire") + " · " + plural(occ,"occurrence") : "Aucune paire pour l’instant",
       "close-terms") +
-    '<div class="sheet-body">' +
-      (pseudo ?
-      '<div class="pad20" style="display:flex;gap:14px;align-items:center;padding:12px 20px 14px">' +
-        '<input class="field" id="addField" placeholder="Rechercher ou ajouter un terme…" aria-label="Ajouter un terme">' +
-        '<button class="textbtn" data-act="add-text" style="color:var(--accent-strong);min-height:0">Ajouter</button>' +
-      '</div>' : "") +
-      list +
-    '</div>' +
+    (n || pseudo ?
+    '<div class="tools">' +
+      '<input class="field" id="addField" autocomplete="off" ' +
+        'placeholder="'+(pseudo ? "Filtrer ou ajouter un terme…" : "Filtrer le registre…")+'" ' +
+        'aria-label="'+(pseudo ? "Filtrer ou ajouter un terme" : "Filtrer le registre")+'">' +
+      (pseudo ? '<button class="textbtn" data-act="add-text" hidden>Ajouter</button>' : "") +
+    '</div>' : "") +
+    '<div class="sheet-body" id="termsBody">' + renderTermsTable() + '</div>' +
     '<div class="sheet-foot">' +
       '<button class="cta" data-act="run">'+(pseudo?"Pseudonymiser le document":"Restaurer le document")+'</button>' +
-      '<button class="txtcta" data-act="pick-reg">Importer un registre</button>' +
+      '<button class="txtcta" data-act="pick-reg">' +
+        (pseudo ? "Importer un registre" : "Changer de registre") + '</button>' +
     '</div>' +
   '</div>');
 }
 
+function renderTermsTable(){
+  if(!S.terms.length){
+    return '<div class="empty"><p class="p" style="color:var(--dim);font-weight:600">Aucune correspondance</p>' +
+      '<p class="p">Appuyez un mot du document pour créer la première. Toutes ses occurrences seront traitées.</p></div>';
+  }
+  return '<div class="thead">' +
+      '<span>Valeur</span><span>Pseudonyme</span><span class="r">Occ.</span><span></span>' +
+    '</div>' +
+    S.terms.map(renderTermRow).join("") +
+    '<p class="p tempty" hidden></p>';
+}
+
+function renderTermRow(t){
+  const open = S.open === t.id;
+  // Une paire venue du registre n'est pas modifiable : son pseudonyme est
+  // celui qui figure dans le document, le changer ne restaurerait plus rien.
+  const fige = !!t.fromRegistry;
+  return (
+  '<div class="trow" data-row="'+t.id+'" data-open="'+(open?"1":"0")+'">' +
+    '<button class="tr" data-act="toggle" data-id="'+t.id+'" aria-expanded="'+open+'">' +
+      '<span class="val">' +
+        '<span class="dot" style="--mark:'+rgbOf(t.type)+'"></span>' +
+        '<span class="tx">'+esc(t.text)+'</span>' +
+      '</span>' +
+      '<span class="ps">'+esc(bare(t.pseudo))+'</span>' +
+      '<span class="num oc'+(t.hits.length?"":" none")+'">'+t.hits.length+'×</span>' +
+      '<span class="chev">'+CHEV+'</span>' +
+    '</button>' +
+    '<div class="tfold"><div class="in"><div class="tdet">' +
+      '<p class="tsrc">'+srcOf(t)+'</p>' +
+      (fige ? "" :
+        '<p class="lbl">Type de donnée</p>' + typeOpts(t.type) +
+        '<p class="lbl">Pseudonyme</p>' +
+        '<div class="pad20"><input class="field" data-pseudo="'+t.id+'" ' +
+          'value="'+esc(t.pseudo)+'" aria-label="Pseudonyme de « '+esc(t.text)+' »"></div>') +
+      '<div class="tacts">' +
+        '<button data-act="locate" data-id="'+t.id+'"'+(t.hits.length?"":" disabled style=\"opacity:.4\"")+'>' +
+          'Voir dans le document</button>' +
+        '<button class="danger" data-act="remove" data-id="'+t.id+'">Retirer</button>' +
+      '</div>' +
+    '</div></div></div>' +
+  '</div>');
+}
+
+/**
+ * Répercute l'état sur le tableau sans le refabriquer.
+ *
+ * Le dépli est une transition portée par l'attribut de la ligne : un rendu
+ * neuf la ferait sauter, et emporterait le champ en cours de saisie.
+ */
+function syncTable(){
+  const body = document.getElementById("termsBody");
+  if(!body) return;
+  S.terms.forEach(t => {
+    const row = body.querySelector('.trow[data-row="'+t.id+'"]');
+    if(!row) return;
+    row.querySelector(".tr .dot").style.setProperty("--mark", rgbOf(t.type));
+    row.querySelector(".ps").textContent = bare(t.pseudo);
+    const oc = row.querySelector(".oc");
+    oc.textContent = t.hits.length + "×";
+    oc.classList.toggle("none", !t.hits.length);
+    const src = row.querySelector(".tsrc");
+    if(src) src.textContent = srcOf(t);
+    row.querySelectorAll(".opt").forEach(b =>
+      b.setAttribute("aria-pressed", String(b.dataset.v === t.type)));
+    const field = row.querySelector("[data-pseudo]");
+    if(field && document.activeElement !== field) field.value = t.pseudo;
+  });
+}
+
+/** Ouvre une ligne, ferme les autres : une seule à la fois se lit. */
+function syncOpen(){
+  const body = document.getElementById("termsBody");
+  if(!body) return;
+  let cible = null;
+  body.querySelectorAll(".trow").forEach(row => {
+    const on = Number(row.dataset.row) === S.open;
+    row.dataset.open = on ? "1" : "0";
+    row.querySelector(".tr").setAttribute("aria-expanded", String(on));
+    if(on) cible = row;
+  });
+  if(!cible) return;
+
+  // Le type retenu se voit : « Identifiant » est le septième jeton, et la
+  // rangée s'ouvrait sur « Personne » sans rien montrer de coché.
+  const chip = cible.querySelector('.opt[aria-pressed="true"]');
+  if(chip){
+    const rangee = chip.parentElement;
+    rangee.scrollLeft = Math.max(0, chip.offsetLeft - rangee.offsetLeft - 20);
+  }
+
+  // Une fois le dépli terminé, on amène la ligne sous l'en-tête collant —
+  // à la main. Demander au navigateur de « révéler » un élément fait défiler
+  // tout ce qui peut l'être, la feuille comprise.
+  setTimeout(() => {
+    const d = cible.getBoundingClientRect().top - body.getBoundingClientRect().top;
+    if(d < 38 || cible.getBoundingClientRect().bottom > body.getBoundingClientRect().bottom)
+      body.scrollTo({top: body.scrollTop + d - 38, behavior:"smooth"});
+  }, 320);
+}
+
+/**
+ * Le champ filtre d'abord, il n'ajoute que si rien ne correspond.
+ *
+ * Un registre de trente paires se cherche ; le bouton « Ajouter » ne se
+ * montre donc que lorsque le filtre ne ramène rien — c'est le seul moment
+ * où le terme saisi mérite d'être créé.
+ */
+function filterTable(q){
+  const body = document.getElementById("termsBody");
+  if(!body) return;
+  const needle = q.trim().toLowerCase();
+  let shown = 0;
+  body.querySelectorAll(".trow").forEach(row => {
+    const t = S.terms.find(x => x.id === Number(row.dataset.row));
+    const hit = !needle || (t && (
+      t.text.toLowerCase().includes(needle) ||
+      t.pseudo.toLowerCase().includes(needle) ||
+      labelOf(t.type).toLowerCase().includes(needle)));
+    row.hidden = !hit;
+    if(hit) shown += 1;
+  });
+
+  const vide = body.querySelector(".tempty");
+  if(vide){
+    vide.hidden = !needle || shown > 0;
+    vide.textContent = "Aucune paire ne contient « " + q.trim() + " ».";
+  }
+  const add = document.querySelector('[data-act="add-text"]');
+  if(add) add.hidden = !needle || shown > 0;
+  const sub = document.querySelector('.sheet[data-sheet="terms"] .sheet-head .s');
+  if(sub){
+    const occ = S.terms.reduce((k, t) => k + t.hits.length, 0);
+    sub.textContent = needle
+      ? shown + " sur " + S.terms.length
+      : plural(S.terms.length,"paire") + " · " + plural(occ,"occurrence");
+  }
+}
+
+/** Un pseudonyme touché dans le document ouvre sa ligne du registre. */
+function openTermRow(id){
+  S.open = id;
+  if(!DOCK.el) return;
+  refreshDock();
+  if(DOCK.vis < DOCK.snaps[1]) setDockVisible(DOCK.snaps[1]);
+  syncOpen();
+  tick(8);
+}
+
 /* Le type est un choix, pas une action : ni pastille pleine, ni vert. */
-const typeOpts = (current, locked) => locked
-  ? '<p class="pad20" style="padding-bottom:16px;font-size:13px;font-weight:700;color:var(--strong)">' +
-      labelOf(current) + '</p>'
-  : '<div class="opts">' + TYPES.map(t =>
+const typeOpts = (current) =>
+  '<div class="opts">' + TYPES.map(t =>
       '<button class="opt" data-act="type" data-v="'+t.value+'" aria-pressed="'+(t.value===current)+'" ' +
       'style="--mark:'+FAMILIES[t.family].rgb+'">' +
       '<span class="dot" style="--mark:'+FAMILIES[t.family].rgb+'"></span>'+t.label+'</button>').join("") + '</div>';
@@ -1371,31 +1582,6 @@ function renderModal(id, props){
       typeOpts(d.type) +
       '<div class="sheet-foot">' +
         '<button class="cta" data-act="create">Créer la correspondance</button>' +
-      '</div>' +
-    '</div>');
-  }
-
-  if(id === "term"){
-    const t = S.terms.find(x => x.id === props.id); if(!t) return "";
-    return (
-    '<div class="sheet">' +
-      '<div class="grab"><i></i></div>' +
-      sheetHead("Correspondance",
-        plural(t.hits.length,"occurrence") +
-        (t.fromRegistry ? " · fournie par le registre" : t.auto ? " · pré-détectée" : "")) +
-      '<div class="pad20" style="padding-top:16px;padding-bottom:14px">' +
-        '<div style="display:flex;align-items:center;gap:9px">' +
-          '<span class="dot" style="--mark:'+rgbOf(t.type)+'"></span>' +
-          '<span style="font-size:19px;font-weight:700;letter-spacing:-.03em;color:var(--strong)">'+esc(t.text)+'</span>' +
-        '</div>' +
-      '</div>' +
-      '<p class="lbl pad20" style="display:block;padding-bottom:10px">Type de donnée</p>' +
-      typeOpts(t.type, t.fromRegistry) +
-      '<p class="lbl pad20" style="display:block;padding-bottom:2px">Pseudonyme</p>' +
-      '<div class="pad20"><input class="field" id="pseudoField" value="'+esc(t.pseudo)+'"' +
-        (t.fromRegistry ? " readonly" : "") + ' aria-label="Pseudonyme"></div>' +
-      '<div class="sheet-foot">' +
-        '<button class="txtcta danger" data-act="remove" data-id="'+t.id+'">Retirer la correspondance</button>' +
       '</div>' +
     '</div>');
   }
@@ -1508,7 +1694,7 @@ phone.addEventListener("click", (e) => {
     // Changer de mode change de document et de correspondances : on repart net.
     if((v === "pseudo" || v === "depseudo") && v !== S.mode){
       S.picked = {doc:null, registry:null}; S.terms = []; S.nextId = 1;
-      S.status = "idle"; S.view = "source"; S.draft = null;
+      S.status = "idle"; S.view = "source"; S.draft = null; S.open = null;
     }
     setTab(v); tick(6);
     return;
@@ -1545,21 +1731,26 @@ phone.addEventListener("click", (e) => {
   if(act === "open-terms"){ setDockVisible(DOCK.snaps[1]); tick(6); return; }
   if(act === "close-terms"){ setDockVisible(0); return; }
   if(act === "livrables"){ openModal("livrables"); return; }
-  if(act === "term"){
+  if(act === "toggle"){
     const id = Number(el.dataset.id);
-    // On referme la liste et on amene le terme sous les yeux : en refermant
-    // la fiche, on le voit dans son texte.
+    S.open = S.open === id ? null : id;
+    syncOpen(); tick(6);
+    return;
+  }
+  if(act === "locate"){
+    // « Voir dans le document » : la feuille s'efface, c'est le texte qu'on
+    // a demandé — la ligne reste dépliée pour le retour.
     setDockVisible(0);
-    locateTerm(id);
-    openModal("term", {id});
+    locateTerm(Number(el.dataset.id));
     return;
   }
   if(act === "type"){
-    if(MODAL.id === "draft" && S.draft){ S.draft.type = v; refreshModal(); }
-    else if(MODAL.id === "term"){
-      const t = S.terms.find(x => x.id === MODAL.props.id);
-      if(t){ t.type = v; t.edited = false; renumber(); refreshModal(); repaintDoc(); refreshDock(); }
-    }
+    if(MODAL.id === "draft" && S.draft){ S.draft.type = v; refreshModal(); tick(6); return; }
+    const row = el.closest(".trow");
+    const t = row && S.terms.find(x => x.id === Number(row.dataset.row));
+    // renumber() touche aussi les autres lignes du même type : le tableau se
+    // met à jour cellule par cellule, sans être refabriqué.
+    if(t){ t.type = v; t.edited = false; renumber(); syncTable(); paint(); }
     tick(6); return;
   }
   if(act === "create"){
@@ -1584,7 +1775,8 @@ phone.addEventListener("click", (e) => {
     const id = Number(el.dataset.id);
     const t = S.terms.find(x => x.id === id);
     S.terms = S.terms.filter(x => x.id !== id);
-    renumber(); closeModal(); paint(); refreshDock();
+    if(S.open === id) S.open = null;
+    renumber(); paint(); refreshDock();
     if(t) toast("« " + t.text + " » retiré");
     return;
   }
@@ -1595,6 +1787,7 @@ phone.addEventListener("click", (e) => {
     if(addTerm(text, guessType(text))){
       field.value = "";
       const found = occurrences(text).length;
+      S.open = S.terms[S.terms.length - 1].id;
       paint(); refreshDock();
       toast(found ? plural(found,"occurrence") + " dans le document" : "Absent du document — ajouté au registre");
     }
@@ -1614,10 +1807,19 @@ phone.addEventListener("click", (e) => {
 });
 
 phone.addEventListener("input", (e) => {
-  if(e.target.id === "pseudoField" && MODAL.id === "term"){
-    const t = S.terms.find(x => x.id === MODAL.props.id);
-    if(t){ t.pseudo = e.target.value; t.edited = true; refreshDock(); }
+  const field = e.target;
+  if(field.dataset && field.dataset.pseudo){
+    const t = S.terms.find(x => x.id === Number(field.dataset.pseudo));
+    if(t){
+      t.pseudo = field.value; t.edited = true;
+      // Seule la cellule change : refabriquer la feuille emporterait le champ.
+      const cell = field.closest(".trow").querySelector(".ps");
+      if(cell) cell.textContent = bare(t.pseudo);
+      if(S.view === "result") repaintDoc();
+    }
+    return;
   }
+  if(field.id === "addField") filterTable(field.value);
 });
 phone.addEventListener("keydown", (e) => {
   if(e.key === "Enter" && e.target.id === "addField"){
@@ -1708,7 +1910,7 @@ phone.addEventListener("pointerup", () => {
   // Une selection etendue prime sur l'appui : c'est elle que l'on capture.
   if(readSelection()) return;
 
-  if(el.dataset.term){ openModal("term", {id:Number(el.dataset.term)}); return; }
+  if(el.dataset.term){ openTermRow(Number(el.dataset.term)); return; }
   if(!creatable()) return;
   const p = Number(el.dataset.p), i = Number(el.dataset.i);
   if(T()[p] && T()[p][i] && T()[p][i].word) setDraft(p, i, i, i);
@@ -1730,7 +1932,7 @@ scrim.addEventListener("click", () => { if(MODAL.el) closeModal(); else if(DOCK.
 const RAIL = [
   {group:"Onglet 01 — Pseudonymiser"},
   {id:"pseudo",   t:"Dépôt",              d:"Fichier, registre facultatif"},
-  {id:"work",     t:"Espace de travail",  d:"Sélection tactile, feuille des termes"},
+  {id:"work",     t:"Espace de travail",  d:"Sélection tactile, registre en tableau"},
   {id:"run",      t:"Traitement",         d:"Substitution locale"},
   {id:"result",   t:"Livrables",          d:"Aperçu du résultat et partage"},
   {group:"Onglet 02 — Dé-pseudonymiser"},
@@ -1755,6 +1957,7 @@ function fullTerms(){
 function resetFlow(){
   S.picked = {doc:null, registry:null};
   S.terms = []; S.nextId = 1; S.status = "idle"; S.view = "source"; S.draft = null;
+  S.open = null;
   closeModal(); closeDock();
 }
 railEl.addEventListener("click", (e) => {
