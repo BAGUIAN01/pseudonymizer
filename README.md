@@ -127,10 +127,15 @@ pas défilable.
 natifs mobiles s'engendrent une fois par `npm run tauri android init` et
 `npm run tauri ios init`.
 
-Windows exige Windows et iOS exige macOS : `.github/workflows/paquets.yml`
-répartit donc le travail sur trois systèmes et rassemble les artefacts sous une
-même étiquette. Outils, comptes, signatures et différences mobiles :
-[docs/empaquetage.md](docs/empaquetage.md).
+Windows exige Windows et une archive iOS exige macOS :
+`.github/workflows/paquets.yml` répartit donc le travail sur trois systèmes et
+dépose les fichiers en artefacts, prêts à être envoyés. Outils, comptes,
+signatures et différences mobiles : [docs/empaquetage.md](docs/empaquetage.md).
+Les instructions à joindre aux fichiers : [docs/installer.md](docs/installer.md).
+
+Sur iPhone, aucun fichier ne s'installe sans compte de développeur : la voie
+gratuite est Safari, « Sur l'écran d'accueil ». Le manifeste web est en place
+pour cela.
 
 ## État d'avancement
 

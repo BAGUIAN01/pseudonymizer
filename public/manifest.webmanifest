@@ -1,0 +1,16 @@
+{
+  "name": "Pseudonymizer — Filtre IA",
+  "short_name": "Pseudonymizer",
+  "description": "Pseudonymisation et dé-pseudonymisation locale de documents, sans transmission de données.",
+  "lang": "fr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "/icone-256.png", "sizes": "256x256", "type": "image/png" },
+    { "src": "/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

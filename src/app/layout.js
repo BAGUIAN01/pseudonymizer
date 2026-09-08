@@ -22,6 +22,30 @@ export const metadata = {
   title: "Pseudonymizer — Filtre IA",
   description:
     "Pseudonymisation et dé-pseudonymisation locale de documents, sans transmission de données.",
+  // Sur iPhone, aucun fichier ne s'installe sans compte de developpeur.
+  // « Ajouter a l'ecran d'accueil » depuis Safari reste la seule voie
+  // gratuite : le manifeste et ces deux declarations lui donnent une icone,
+  // un nom, et une fenetre sans barre d'adresse.
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Pseudonymizer",
+    statusBarStyle: "default",
+  },
+  // Next n'emet que le nom standardise, honore depuis iOS 16.4. Les versions
+  // anterieures ne connaissent que celui-ci, et sans lui l'application
+  // s'ouvrirait dans Safari avec sa barre d'adresse.
+  other: { "apple-mobile-web-app-capable": "yes" },
+};
+
+export const viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#161a20" },
+  ],
+  // L'interface tactile gere son propre defilement : la remise a l'echelle
+  // par pincement decalerait les barres flottantes.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }) {

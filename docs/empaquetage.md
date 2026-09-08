@@ -7,13 +7,18 @@ outils, les comptes et les signatures.
 
 ## Ce que chaque cible produit
 
-| Cible | Artefact | Se fabrique sur | Compte requis |
+Les fichiers se distribuent à la main : aucun magasin n'intervient.
+
+| Cible | Artefact | Se fabrique sur | Envoyable tel quel |
 | --- | --- | --- | --- |
-| Windows | `.exe` (NSIS), `.msi` | Windows | non |
-| macOS | `.dmg`, `.app` universel | macOS | pour la distribution |
-| Linux | `.deb`, `.AppImage` | Linux | non |
-| Android | `.apk`, `.aab` | n'importe quel système | pour le magasin |
-| iOS | `.ipa` | macOS uniquement | oui, sans exception |
+| Windows | `.exe` (NSIS), `.msi` | Windows | oui |
+| macOS | `.dmg` universel | macOS | oui, avec un détour au premier lancement |
+| Linux | `.deb`, `.AppImage` | Linux | oui |
+| Android | `.apk` | n'importe quel système | oui |
+| iOS | `.ipa` | macOS uniquement | **non — voir plus bas** |
+
+Les instructions à joindre aux fichiers sont dans
+[installer.md](installer.md).
 
 **Windows exige Windows et iOS exige macOS.** Aucune astuce n'y change rien :
 c'est pourquoi `.github/workflows/paquets.yml` répartit le travail sur trois
@@ -91,8 +96,15 @@ keytool -genkey -v -keystore release.jks -keyalg RSA -keysize 2048 \
 Gardez-la : sans elle, aucune mise à jour de l'application publiée n'est
 possible, jamais. Pour le magasin, comptez 25 $ une fois.
 
-**Apple** — 99 €/an, pour iOS comme pour une application macOS distribuée hors
-du magasin, qui doit être notariée.
+**macOS** — deux voies. Sans certificat, le `.dmg` se construit et s'installe :
+le destinataire passe une fois par Réglages Système → Confidentialité et
+sécurité. Avec un compte Apple à 99 €/an, la signature *Developer ID* et la
+notarisation suppriment ce détour, et l'application s'ouvre d'un double-clic.
+
+Une précision qui compte sur puce Apple : un binaire **sans aucune signature**
+ne démarre pas, même la quarantaine levée. La chaîne applique donc une
+signature locale quand aucun certificat n'est fourni — elle ne certifie
+personne, elle rend seulement l'application exécutable.
 
 **Windows** — un certificat de signature de code, de l'ordre de quelques
 centaines d'euros par an. Facultatif : sans lui, l'installeur fonctionne mais
@@ -105,6 +117,35 @@ serveur.
 
 Ces valeurs deviennent des secrets du dépôt ; leurs noms sont en tête du
 fichier de workflow.
+
+## iOS — la seule cible qui résiste
+
+Il n'existe aucun moyen d'envoyer un fichier qu'un iPhone installera. Le
+système n'accepte que ce qu'un profil de provisionnement autorise, et un profil
+suppose le programme Apple. Les voies réelles :
+
+- **Safari, « Sur l'écran d'accueil ».** Gratuit, immédiat, et c'est la même
+  interface : l'application est un export statique, tout le traitement est
+  local. Le manifeste web est déjà en place — l'icône, le nom et la fenêtre
+  sans barre d'adresse en découlent. Il suffit de servir le dossier `out/`
+  sur une adresse en HTTPS. Ce que l'on perd par rapport à une installation :
+  la mise à jour automatique, et les projets sont retenus par le navigateur
+  plutôt que par un fichier. Sans agent de service, la première ouverture
+  demande le réseau ; le traitement, lui, n'en demande jamais.
+- **TestFlight**, 99 €/an. Ce n'est pas publier sur l'App Store : vous
+  téléversez une version, vous invitez par courriel, les testeurs installent
+  depuis l'application TestFlight. Jusqu'à cent testeurs internes, dix mille
+  externes. Les externes passent une revue légère, les internes aucune.
+- **Ad Hoc**, 99 €/an également. Un `.ipa` signé pour une liste d'appareils
+  dont vous enregistrez l'identifiant, cent au maximum par an, à installer par
+  Apple Configurator ou par un lien servi en HTTPS. Plus lourd que TestFlight,
+  pour un résultat moindre.
+- **Compte gratuit** : signature valable sept jours, réinstallation par câble
+  depuis Xcode. Bon pour votre propre appareil, inutilisable pour distribuer.
+
+En résumé : **l'écran d'accueil de Safari si vous ne payez pas, TestFlight si
+vous payez.** L'exécution iOS de la chaîne ne démarre que si un identifiant
+d'équipe est déclaré ; sans lui, elle est sautée plutôt que d'échouer.
 
 ## Ce qui diffère sur téléphone
 
@@ -136,6 +177,8 @@ traitées dans le code :
 1. **Android d'abord.** Aucun compte, aucune attente : un APK s'installe à la
    main et se teste le jour même.
 2. **Windows et Linux ensuite**, qui ne demandent rien non plus.
-3. **macOS et iOS en dernier**, quand le dessin est arrêté : c'est là que le
-   compte, la notarisation et les profils de provisionnement font perdre des
-   jours si l'on s'y prend au mauvais moment.
+3. **macOS** juste après : le `.dmg` part sans compte, au prix d'un détour
+   expliqué une fois au destinataire.
+4. **iOS en dernier, si jamais.** Servez l'application en HTTPS et laissez
+   Safari la poser sur l'écran d'accueil ; ne payez les 99 €/an que le jour où
+   une capacité proprement native manquera.

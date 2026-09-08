@@ -1,21 +1,26 @@
-# Fabrique les paquets installables des quatre plateformes.
+# Fabrique les fichiers d'installation, sans passer par aucun magasin.
+#
+# Chaque execution depose ses fichiers en artefacts, telechargeables depuis la
+# page de l'execution : c'est de la que partent les envois. Une etiquette `v*`
+# les rassemble en plus dans une publication brouillon, qui donne un seul lien
+# pour tout recuperer.
 #
 # Un depot ne peut pas tout produire depuis une seule machine : Windows exige
-# Windows, et iOS exige macOS et Xcode. Chaque cible a donc son execution, et
-# la publication les rassemble sous la meme etiquette.
+# Windows, et une archive iOS exige macOS. D'ou trois systemes d'execution.
 #
-# Les secrets attendus, et ce qui se passe sans eux :
+# Secrets, et ce qui se passe sans eux :
 #
-#   TAURI_SIGNING_PRIVATE_KEY / _PASSWORD  signature de mise a jour (bureau).
+#   TAURI_SIGNING_PRIVATE_KEY / _PASSWORD  signature des mises a jour de bureau.
 #                                          Absents : les paquets se construisent,
 #                                          mais l'application installee refusera
 #                                          les mises a jour automatiques.
-#   ANDROID_KEYSTORE / _PASSWORD / _ALIAS  signature de publication Android.
-#                                          Absents : l'APK est non signe, donc
-#                                          installable a la main mais pas
-#                                          publiable sur le magasin.
-#   APPLE_*                                signature et notarisation Apple.
-#                                          Absents : l'execution iOS est sautee.
+#   ANDROID_KEYSTORE / _PASSWORD / _ALIAS  signature Android. Absents : l'APK
+#                                          reste installable a la main.
+#   APPLE_SIGNING_IDENTITY, APPLE_ID,      signature Developer ID et
+#   APPLE_PASSWORD, APPLE_TEAM_ID          notarisation macOS. Absents : le .dmg
+#                                          se construit quand meme, et s'ouvre
+#                                          au prix d'un detour decrit dans
+#                                          docs/installer.md.
 name: Paquets
 
 on:
@@ -31,14 +36,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - nom: macOS (dmg universel)
+          - nom: macOS
             os: macos-latest
+            cible: macos
             args: "--target universal-apple-darwin"
-          - nom: Windows (exe, msi)
+          - nom: Windows
             os: windows-latest
+            cible: windows
             args: ""
-          - nom: Linux (deb, AppImage)
+          - nom: Linux
             os: ubuntu-22.04
+            cible: linux
             args: ""
 
     steps:
@@ -49,37 +57,64 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Chaine Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.cible == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
 
       # Tauri s'appuie sur la webview du systeme ; sous Linux elle se compile.
-      - name: Bibliotheques systeme (Linux)
-        if: matrix.os == 'ubuntu-22.04'
+      - name: Bibliotheques systeme
+        if: matrix.cible == 'linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - run: npm ci
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: Construire
+        uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Renseignes, ces quatre secrets font signer et notariser le paquet
+          # macOS : il s'ouvre alors d'un double-clic, sans detour.
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Pseudonymizer ${{ github.ref_name }}
-          releaseDraft: true
           args: ${{ matrix.args }}
 
+      # Sur puce Apple, un binaire sans aucune signature ne demarre pas — pas
+      # meme apres avoir leve la mise en quarantaine. La signature locale ne
+      # certifie personne, elle rend seulement l'application executable.
+      - name: Signature locale, faute de certificat
+        if: matrix.cible == 'macos' && env.APPLE_SIGNING_IDENTITY == ''
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          app=$(find src-tauri/target -name "*.app" -maxdepth 6 | head -1)
+          if [ -n "$app" ]; then codesign --force --sign - "$app"; fi
+
+      - name: Rassembler
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.cible }}
+          if-no-files-found: error
+          path: |
+            src-tauri/target/**/release/bundle/dmg/*.dmg
+            src-tauri/target/**/release/bundle/nsis/*.exe
+            src-tauri/target/**/release/bundle/msi/*.msi
+            src-tauri/target/**/release/bundle/deb/*.deb
+            src-tauri/target/**/release/bundle/appimage/*.AppImage
+
   android:
-    name: Android (apk, aab)
+    name: Android
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -132,20 +167,21 @@ jobs:
           keyPassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           PROPS
 
-      - run: npm run android:build
+      - run: npm run tauri android build -- --apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: android
-          path: |
-            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
-            src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
+          if-no-files-found: error
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
 
+  # Une archive iOS ne s'installe pas en la recevant : le systeme n'accepte que
+  # ce qu'un profil autorise, et un profil suppose le programme Apple. Cette
+  # execution ne demarre donc que si un identifiant d'equipe est declare — voir
+  # docs/empaquetage.md, section iOS.
   ios:
-    name: iOS (ipa)
+    name: iOS
     runs-on: macos-latest
-    # Sans compte Apple, l'archive ne peut pas etre signee : l'execution est
-    # sautee plutot que d'echouer a chaque fois.
     if: ${{ vars.APPLE_TEAM_ID != '' }}
     steps:
       - uses: actions/checkout@v4
@@ -189,9 +225,29 @@ jobs:
       - name: Archive
         env:
           APPLE_DEVELOPMENT_TEAM: ${{ vars.APPLE_TEAM_ID }}
-        run: npm run ios:build -- --export-method app-store-connect
+        run: npm run tauri ios build -- --export-method ad-hoc
 
       - uses: actions/upload-artifact@v4
         with:
           name: ios
+          if-no-files-found: error
           path: src-tauri/gen/apple/build/**/*.ipa
+
+  # Une etiquette rassemble tout au meme endroit : un seul lien a envoyer.
+  publication:
+    name: Publication brouillon
+    needs: [bureau, android]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: paquets
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: Pseudonymizer ${{ github.ref_name }}
+          files: paquets/**/*
