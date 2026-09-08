@@ -152,6 +152,8 @@ h1{
   --border:rgba(0,0,0,.13); --tint:11 13 17; --destructive:#c0322f;
   --mark-a:.32; --mark-hi:.5; --pseudo-a:.36; --dot-mix:35%;
   --shadow-nav:0 10px 30px rgba(16,24,40,.16); --zone-on:rgba(63,110,18,.09);
+  --glass:rgba(255,255,255,.62); --glass-edge:rgba(10,14,20,.09);
+  --glass-line:rgba(255,255,255,.85);
   position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;
   background:var(--paper);color:var(--foreground);
   font-size:15px;line-height:1.4;-webkit-tap-highlight-color:transparent;user-select:none;
@@ -163,6 +165,8 @@ h1{
   --border:rgba(255,255,255,.09); --tint:255 255 255; --destructive:#ff8a8a;
   --mark-a:.11; --mark-hi:.2; --pseudo-a:.14; --dot-mix:0%;
   --shadow-nav:0 12px 36px rgba(0,0,0,.6); --zone-on:rgba(203,255,77,.09);
+  --glass:rgba(26,30,37,.58); --glass-edge:rgba(255,255,255,.13);
+  --glass-line:rgba(255,255,255,.09);
 }
 .phone *{box-sizing:border-box}
 :where(.phone) :where(button){font:inherit;color:inherit;background:none;border:0;cursor:pointer}
@@ -203,7 +207,7 @@ h1{
 
 .body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .body.pad{padding:0 20px 28px}
-.body.tabroot{display:flex;flex-direction:column;padding:6px 20px 104px}
+.body.tabroot{display:flex;flex-direction:column;padding:6px 20px 24px}
 .body::-webkit-scrollbar{width:0}
 
 .homebar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
@@ -215,10 +219,15 @@ h1{
   position:absolute;left:20px;right:20px;bottom:26px;z-index:30;
   display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:none;
 }
-.pill{
-  display:flex;gap:4px;padding:5px;border-radius:22px;pointer-events:auto;
-  background:var(--sheet);border:1px solid var(--border);box-shadow:var(--shadow-nav);
+/* Verre : le contenu passe dessous, la barre le laisse deviner. */
+.glass{
+  background:var(--glass);
+  -webkit-backdrop-filter:blur(26px) saturate(180%);
+  backdrop-filter:blur(26px) saturate(180%);
+  border:1px solid var(--glass-edge);
+  box-shadow:var(--shadow-nav), inset 0 1px 0 var(--glass-line);
 }
+.pill{display:flex;gap:4px;padding:5px;border-radius:22px;pointer-events:auto}
 .pill button{
   display:flex;flex-direction:column;align-items:center;gap:3px;
   padding:8px 12px 7px;border-radius:17px;color:var(--dim);
@@ -230,13 +239,27 @@ h1{
 
 /* Bascule de thème, dans le bandeau : un état, pas une action — le vert
    n'y a donc pas sa place. */
-.themetog{display:flex;gap:2px;padding:2px;border-radius:12px;background:rgb(var(--tint)/.06)}
-.themetog button{width:36px;height:28px;border-radius:10px;color:var(--faint);
+.themetog{display:flex;gap:2px;padding:2px;border-radius:13px}
+.themetog button{width:36px;height:28px;border-radius:11px;color:var(--faint);
   display:flex;align-items:center;justify-content:center}
-.themetog button[aria-pressed="true"]{background:var(--paper);color:var(--strong)}
+.themetog button[aria-pressed="true"]{
+  background:var(--paper);color:var(--strong);
+  box-shadow:0 1px 3px rgba(16,24,40,.14), inset 0 1px 0 var(--glass-line);
+}
+.phone[data-app="dark"] .themetog button[aria-pressed="true"]{box-shadow:0 1px 4px rgba(0,0,0,.5)}
+
+/* Bandeau du document : le texte glisse dessous. */
+.topbar{position:absolute;top:0;left:0;right:0;z-index:6;border-radius:0;
+  border-width:0 0 1px;box-shadow:inset 0 1px 0 var(--glass-line)}
+.topbar .head{background:none;padding-bottom:12px}
+.topbar .hint,.topbar .views{background:none;border-bottom:0}
 
 /* Les deux dépôts : l'écran entier, rien d'autre. */
-.zones{display:flex;flex-direction:column;gap:12px;height:100%}
+.zones{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
+
+/* La validation flotte au-dessus des onglets : les dépôts courent jusqu'au
+   bas de l'écran, et le verre a enfin quelque chose à flouter. */
+.ctabar{position:absolute;left:20px;right:20px;bottom:104px;z-index:29}
 .zone{
   flex:1;min-height:140px;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:7px;padding:22px;text-align:center;
@@ -399,10 +422,10 @@ h1{
 .bar i{display:block;height:100%;background:var(--primary);transition:width .22s linear}
 
 .toast{
-  position:absolute;left:20px;right:20px;top:60px;z-index:80;
+  position:absolute;left:20px;right:20px;bottom:96px;z-index:80;
   padding:12px 14px;border-radius:10px;background:var(--sheet);
   border:1px solid var(--border);font-size:12.5px;font-weight:600;color:var(--strong);
-  text-align:center;opacity:0;transform:translateY(-8px);
+  text-align:center;opacity:0;transform:translateY(8px);
   transition:opacity .22s,transform .22s;pointer-events:none;
 }
 .toast.on{opacity:1;transform:translateY(0)}
@@ -694,6 +717,7 @@ const GLYPH = {
   moon: G('<path d="M20 14.6A8.2 8.2 0 0 1 9.4 4 8.2 8.2 0 1 0 20 14.6Z"/>'),
   file: G('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>'),
   grid: G('<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 10v10"/>'),
+  folder: G('<path d="M3.6 7.4A2.2 2.2 0 0 1 5.8 5.2h3.3l1.9 2.4h7.2a2.2 2.2 0 0 1 2.2 2.2v8a2.2 2.2 0 0 1-2.2 2.2H5.8a2.2 2.2 0 0 1-2.2-2.2z"/>'),
 };
 
 /* Trois onglets : les deux modes à gauche, le projet à droite. */
@@ -701,24 +725,20 @@ function NAV(){
   const tab = (id, glyph, label) =>
     '<button data-act="tab" data-v="'+id+'" aria-selected="'+(S.tab===id)+'">' +
     glyph + '<span class="n">'+label+'</span></button>';
-  const initials = S.project.name.split(/\s+/).filter(w => /[\p{L}]/u.test(w))
-    .slice(0,2).map(w => w[0].toUpperCase()).join("");
   return '<div class="dock">' +
-    '<div class="pill">' +
+    '<div class="pill glass">' +
       tab("pseudo", GLYPH.mask, "Pseudonymiser") +
       tab("depseudo", GLYPH.reveal, "Dé-pseudonymiser") +
     '</div>' +
-    '<div class="pill">' +
-      '<button data-act="tab" data-v="project" aria-selected="'+(S.tab==="project")+'" ' +
-      'aria-label="Projet — '+esc(S.project.name)+'">' +
-      '<span class="mono">'+esc(initials)+'</span><span class="n">Projet</span></button>' +
+    '<div class="pill glass">' +
+      tab("project", GLYPH.folder, "Projet") +
     '</div>' +
   '</div>';
 }
 
 const themeToggle = () => {
   const dark = document.getElementById("phone").dataset.app === "dark";
-  return '<div class="themetog">' +
+  return '<div class="themetog glass">' +
     '<button data-act="app-theme" data-v="light" aria-pressed="'+(!dark)+'" aria-label="Thème clair">'+GLYPH.sun+'</button>' +
     '<button data-act="app-theme" data-v="dark" aria-pressed="'+dark+'" aria-label="Thème sombre">'+GLYPH.moon+'</button>' +
   '</div>';
@@ -738,8 +758,11 @@ function renderTabRoot(){
   const d = S.picked.doc, r = S.picked.registry;
   const ready = !!d && (pseudo || !!r);
 
-  const zone = (on, act, glyph, key, name, sub, req) =>
-    '<button class="zone" data-on="'+(on?1:0)+'" data-act="'+act+'">' +
+  // La seconde zone court sous le bouton et les onglets : son contenu se
+  // décale de ce qu'ils lui prennent, sinon il se lit à travers eux.
+  const zone = (on, act, glyph, key, name, sub, req, pad) =>
+    '<button class="zone" data-on="'+(on?1:0)+'" data-act="'+act+'"' +
+    (pad ? ' style="padding-bottom:'+pad+'px"' : "") + '>' +
       (on
         ? '<span class="lbl">'+key+'</span><span class="n">'+esc(name)+'</span>' +
           '<span class="a">Remplacer</span>'
@@ -753,11 +776,12 @@ function renderTabRoot(){
     '<div class="zones">' +
       zone(!!d, "pick-doc", GLYPH.file, "Le document", d, "PDF · DOCX · XLSX · TXT") +
       zone(!!r, "pick-reg", GLYPH.grid, "Les correspondances", r,
-           pseudo ? "Facultatif · .xlsx" : "Requis · .xlsx", !pseudo) +
+           pseudo ? "Facultatif · .xlsx" : "Requis · .xlsx", !pseudo, d ? 156 : 90) +
     '</div>' +
-    (d ? '<button class="cta" style="margin-top:12px;flex:none"'+(ready?"":" disabled")+' data-act="confirm">' +
-           (pseudo ? "Continuer vers la sélection" : "Continuer vers la restauration") + '</button>' : "") +
-  '</div>' + NAV());
+  '</div>' +
+  (d ? '<div class="ctabar"><button class="cta"'+(ready?"":" disabled")+' data-act="confirm">' +
+         (pseudo ? "Continuer vers la sélection" : "Continuer vers la restauration") + '</button></div>' : "") +
+  NAV());
 }
 
 /* --- Onglet 03 : le projet, et ce qui n'appartient à aucun flux ------------ */
@@ -849,10 +873,11 @@ function renderWork(){
         '<button data-act="view" data-v="result" aria-pressed="'+result+'">'+(pseudo?"Pseudonymisé":"Restauré")+'</button>' +
       '</div>'
     : '<p class="hint">'+(pseudo
-        ? "Appuyez un mot pour le capturer · maintenez pour l’entité entière"
-        : "Correspondances fournies par le registre · appuyez un pseudonyme pour l’inspecter")+'</p>';
+        ? "Appuyez un mot · maintenez pour l’entité entière"
+        : "Correspondances du registre · appuyez pour inspecter")+'</p>';
 
-  return head + strip + '<div class="body" id="docBody">' + renderDocBody() + '</div>' +
+  return '<div class="topbar glass">' + head + strip + '</div>' +
+    '<div class="body" id="docBody">' + renderDocBody() + '</div>' +
     (S.status === "running" ? renderRunning() : "");
 }
 
@@ -892,6 +917,7 @@ layer.appendChild(modalHost);
 let toastTimer = null;
 function toast(msg){
   toastEl.textContent = msg;
+  toastEl.style.bottom = (DOCK.el ? DOCK.vis + 18 : 96) + "px";
   toastEl.classList.add("on");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove("on"), 2200);
@@ -901,6 +927,15 @@ function tick(ms){ try{ navigator.vibrate && navigator.vibrate(ms||8); }catch(e)
 /* --- Pile ---------------------------------------------------------------- */
 function topScreen(){ return stack.lastElementChild; }
 
+/* Le bandeau du document flotte au-dessus du texte : le corps se décale
+   d'autant, sinon la première ligne se lit sous le verre. */
+function syncTopbar(){
+  const el = topScreen(); if(!el) return;
+  const bar = el.querySelector(".topbar");
+  const body = el.querySelector(".body");
+  if(bar && body) body.style.paddingTop = bar.offsetHeight + "px";
+}
+
 function paint(){
   const el = topScreen(); if(!el) return;
   const id = S.stack[S.stack.length-1];
@@ -908,6 +943,7 @@ function paint(){
   const y = body ? body.scrollTop : 0;
   el.innerHTML = SCREENS[id].render();
   const next = el.querySelector(".body");
+  syncTopbar();
   if(next && y) next.scrollTop = y;
 }
 function repaintDoc(){
@@ -923,6 +959,7 @@ function push(id){
   stack.appendChild(el);
   if(prev){ prev.classList.remove("return","fade"); prev.classList.add("behind"); }
   S.stack.push(id);
+  syncTopbar();
   afterNav(id);
 }
 function pop(){
@@ -943,6 +980,7 @@ function setTab(id){
   el.className = "screen fade";
   el.innerHTML = SCREENS[id].render();
   stack.appendChild(el);
+  syncTopbar();
   afterNav(id);
 }
 function afterNav(id){
@@ -1205,7 +1243,8 @@ function renderModal(id, props){
     '<div class="sheet">' +
       '<div class="grab"><i></i></div>' +
       '<div class="sheet-head"><span class="t">Livrables prêts</span>' +
-        '<span class="num">'+plural(files.length,"fichier")+'</span></div>' +
+        '<span class="num">'+plural(files.length,"fichier")+'</span>' +
+        '<button class="textbtn" data-act="close-sheet" style="min-height:0">Terminé</button></div>' +
       '<div class="sheet-body pad20">' + files.map(([nm,sz]) =>
         '<div class="row"><span class="grow"><span class="t">'+esc(nm)+'</span></span>' +
           '<span class="v">'+sz+'</span></div>').join("") +
@@ -1314,10 +1353,12 @@ phone.addEventListener("click", (e) => {
   if(act === "confirm"){
     if(S.mode === "pseudo"){
       seedAuto(); push("work");
-      setTimeout(() => toast(plural(S.terms.length,"donnée structurée") + " pré-détectée" + (S.terms.length>1?"s":"")), 420);
+      setTimeout(() => { const k = S.terms.length;
+        toast(k + (k > 1 ? " données structurées pré-détectées" : " donnée structurée pré-détectée")); }, 420);
     }else{
       loadRegistry(); push("work");
-      setTimeout(() => toast(plural(S.terms.length,"correspondance") + " lue" + (S.terms.length>1?"s":"") + " dans le registre"), 420);
+      setTimeout(() => { const k = S.terms.length;
+        toast(k + (k > 1 ? " correspondances lues" : " correspondance lue") + " dans le registre"); }, 420);
     }
     return;
   }
