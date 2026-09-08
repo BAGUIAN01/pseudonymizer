@@ -407,16 +407,37 @@ h1{
 }
 .sheet.settled{transition:transform .34s cubic-bezier(.32,.72,0,1),
   height .34s cubic-bezier(.32,.72,0,1)}
-.sheet.gone{border-top-color:transparent;overflow:hidden}
-.grab{flex:none;display:flex;justify-content:center;padding:9px 0 3px;cursor:grab}
-.grab i{width:34px;height:4px;border-radius:99px;background:rgb(var(--tint)/.16);display:block}
-.sheet-head{flex:none;display:flex;align-items:center;gap:12px;padding:6px 20px 16px}
-.sheet-head .t{flex:1;font-size:15px;font-weight:700;letter-spacing:-.02em;color:var(--strong)}
-.sheet-head .num{flex:none}
+/* Repliee, la feuille disparait vraiment : sans cela ses boutons restaient
+   atteignables au clavier et annonces par les lecteurs d'ecran. */
+.sheet.gone{border-top-color:transparent;overflow:hidden;visibility:hidden}
+.grab{flex:none;display:flex;justify-content:center;padding:10px 0 4px;cursor:grab}
+.grab i{width:40px;height:5px;border-radius:99px;background:rgb(var(--tint)/.22);display:block}
+
+/* En-tete d'une feuille : un titre, ce qu'il faut savoir dessous, et une
+   fermeture qu'on voit. Le libelle mono de 9,5 px ne se voyait pas. */
+.sheet-head{
+  flex:none;display:flex;align-items:flex-start;gap:12px;
+  padding:8px 20px 14px;border-bottom:1px solid var(--border);
+}
+.sheet-head .ttl{flex:1;min-width:0}
+.sheet-head .t{display:block;font-size:17px;font-weight:700;letter-spacing:-.025em;color:var(--strong)}
+.sheet-head .s{display:block;margin-top:3px;font-size:12.5px;color:var(--faint)}
+.close{
+  position:relative;flex:none;width:31px;height:31px;border-radius:99px;
+  background:rgb(var(--tint)/.08);color:var(--dim);
+  font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;
+}
+/* La cible fait 45 px, le disque en fait 31 : on ne dessine pas un bouton
+   de la taille du doigt, on l'atteint. */
+.close::after{content:"";position:absolute;inset:-7px}
+.close:active{background:rgb(var(--tint)/.16)}
 .sheet-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .sheet-body::-webkit-scrollbar{width:0}
 .sheet-foot{flex:none;padding:12px 20px 30px;border-top:1px solid var(--border);
-  display:flex;flex-direction:column;gap:2px;background:var(--sheet)}
+  display:flex;flex-direction:column;gap:4px;background:var(--sheet)}
+/* Ligne de fichier produit. */
+.file{display:flex;align-items:baseline;gap:12px;padding:13px 0;border-bottom:1px solid var(--border)}
+.file .n{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--strong);overflow-wrap:anywhere}
 .pad20{padding:0 20px}
 
 .termrow{
@@ -877,7 +898,8 @@ function renderDocBody(){
         if(range.draft){
           html += '<span class="sel" data-p="'+p+'" data-i="'+i+'">'+esc(raw)+'</span>';
         }else if(result){
-          html += '<span class="pseudo" style="--mark:'+rgbOf(range.term.type)+'">' +
+          html += '<span class="pseudo" data-term="'+range.term.id+'" data-p="'+p+'" data-i="'+i+'" ' +
+                  'style="--mark:'+rgbOf(range.term.type)+'">' +
                   esc(pseudo ? range.term.pseudo : range.term.text) + '</span>';
         }else{
           html += '<span class="mark" data-term="'+range.term.id+'" data-p="'+p+'" data-i="'+i+'" ' +
@@ -1236,9 +1258,20 @@ function bindDrag(el, ref, dismissible){
 /* =========================================================================
    Contenu des feuilles
    ========================================================================= */
+/** En-tete commun a toutes les feuilles. */
+function sheetHead(title, sub, act){
+  return '<div class="sheet-head">' +
+    '<span class="ttl"><span class="t">'+title+'</span>' +
+    (sub ? '<span class="s">'+sub+'</span>' : "") + '</span>' +
+    '<button class="close" data-act="'+(act || "close-sheet")+'" aria-label="Fermer">×</button>' +
+  '</div>';
+}
+
 function renderTermsSheet(){
   const pseudo = S.mode === "pseudo";
   const n = S.terms.length;
+  const occ = S.terms.reduce((k, t) => k + t.hits.length, 0);
+
   const list = n ? S.terms.map(t =>
     '<button class="termrow" data-act="term" data-id="'+t.id+'">' +
       '<span class="l1">' +
@@ -1256,14 +1289,12 @@ function renderTermsSheet(){
   return (
   '<div class="sheet" data-sheet="terms">' +
     '<div class="grab"><i></i></div>' +
-    '<div class="sheet-head">' +
-      '<span class="t">Correspondances</span>' +
-      '<span class="num">'+plural(n,"terme")+'</span>' +
-      '<button class="textbtn" data-act="close-terms" style="min-height:0">Terminé</button>' +
-    '</div>' +
+    sheetHead("Correspondances",
+      n ? plural(n,"terme") + " · " + plural(occ,"occurrence") : "Aucun terme pour l’instant",
+      "close-terms") +
     '<div class="sheet-body">' +
       (pseudo ?
-      '<div class="pad20" style="display:flex;gap:14px;align-items:center;padding:6px 20px 14px">' +
+      '<div class="pad20" style="display:flex;gap:14px;align-items:center;padding:12px 20px 14px">' +
         '<input class="field" id="addField" placeholder="Rechercher ou ajouter un terme…" aria-label="Ajouter un terme">' +
         '<button class="textbtn" data-act="add-text" style="color:var(--accent-strong);min-height:0">Ajouter</button>' +
       '</div>' : "") +
@@ -1291,14 +1322,13 @@ function renderModal(id, props){
     return (
     '<div class="sheet">' +
       '<div class="grab"><i></i></div>' +
-      '<div class="sheet-head"><span class="t">Nouvelle correspondance</span>' +
-        '<button class="textbtn" data-act="cancel-draft" style="min-height:0">Annuler</button></div>' +
-      '<div class="pad20" style="padding-bottom:14px">' +
+      sheetHead("Nouvelle correspondance",
+        plural(d.count,"occurrence") + " dans le document", "cancel-draft") +
+      '<div class="pad20" style="padding-top:16px;padding-bottom:14px">' +
         '<div style="display:flex;align-items:center;gap:9px">' +
           '<span class="dot" style="--mark:'+rgbOf(d.type)+'"></span>' +
-          '<span style="font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--strong)">'+esc(d.text)+'</span>' +
+          '<span style="font-size:19px;font-weight:700;letter-spacing:-.03em;color:var(--strong)">'+esc(d.text)+'</span>' +
         '</div>' +
-        '<p class="num" style="margin:7px 0 0 16px">'+plural(d.count,"occurrence")+' · '+famOf(d.type)+'</p>' +
       '</div>' +
       '<p class="lbl pad20" style="display:block;padding-bottom:10px">Type de donnée</p>' +
       typeOpts(d.type) +
@@ -1313,15 +1343,14 @@ function renderModal(id, props){
     return (
     '<div class="sheet">' +
       '<div class="grab"><i></i></div>' +
-      '<div class="sheet-head"><span class="t">Correspondance</span>' +
-        '<button class="textbtn" data-act="close-sheet" style="min-height:0">Terminé</button></div>' +
-      '<div class="pad20" style="padding-bottom:14px">' +
+      sheetHead("Correspondance",
+        plural(t.hits.length,"occurrence") +
+        (t.fromRegistry ? " · fournie par le registre" : t.auto ? " · pré-détectée" : "")) +
+      '<div class="pad20" style="padding-top:16px;padding-bottom:14px">' +
         '<div style="display:flex;align-items:center;gap:9px">' +
           '<span class="dot" style="--mark:'+rgbOf(t.type)+'"></span>' +
-          '<span style="font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--strong)">'+esc(t.text)+'</span>' +
+          '<span style="font-size:19px;font-weight:700;letter-spacing:-.03em;color:var(--strong)">'+esc(t.text)+'</span>' +
         '</div>' +
-        '<p class="num" style="margin:7px 0 0 16px">'+plural(t.hits.length,"occurrence")+
-          (t.fromRegistry ? " · fournie par le registre" : t.auto ? " · pré-détectée" : "")+'</p>' +
       '</div>' +
       '<p class="lbl pad20" style="display:block;padding-bottom:10px">Type de donnée</p>' +
       typeOpts(t.type, t.fromRegistry) +
@@ -1346,8 +1375,8 @@ function renderModal(id, props){
     return (
     '<div class="sheet">' +
       '<div class="grab"><i></i></div>' +
-      '<div class="sheet-head"><span class="t">'+(doc?"Choisir un document":"Choisir le registre")+'</span>' +
-        '<button class="textbtn" data-act="close-sheet" style="min-height:0">Annuler</button></div>' +
+      sheetHead(doc ? "Choisir un document" : "Choisir le registre",
+                doc ? "PDF · DOCX · XLSX · TXT" : "Un classeur de correspondances") +
       '<div class="sheet-body pad20" style="padding-bottom:30px">' + items.map(([t,d,v]) =>
         '<button class="row" data-act="picked" data-kind="'+props.kind+'" data-v="'+esc(v)+'">' +
           '<span class="grow"><span class="t">'+esc(t)+'</span><span class="d">'+esc(d)+'</span></span>' +
@@ -1357,37 +1386,25 @@ function renderModal(id, props){
 
   if(id === "livrables"){
     const pseudo = S.mode === "pseudo";
+    // Le bureau ne connait qu'une action : tout telecharger. La version
+    // tactile n'a pas a en inventer une autre.
     const files = pseudo
       ? [["Exercice 1_pseudonymise.pdf","214 Ko"],["Registre_Exercice 1.xlsx","12 Ko"]]
       : [["Exercice 1_restaure.pdf","211 Ko"]];
     return (
     '<div class="sheet">' +
       '<div class="grab"><i></i></div>' +
-      '<div class="sheet-head"><span class="t">Livrables prêts</span>' +
-        '<span class="num">'+plural(files.length,"fichier")+'</span>' +
-        '<button class="textbtn" data-act="close-sheet" style="min-height:0">Terminé</button></div>' +
+      sheetHead("Livrables prêts",
+        pseudo ? "Le document et son registre" : "Le document restauré") +
       '<div class="sheet-body pad20">' + files.map(([nm,sz]) =>
-        '<div class="row"><span class="grow"><span class="t">'+esc(nm)+'</span></span>' +
-          '<span class="v">'+sz+'</span></div>').join("") +
+        '<div class="file"><span class="n">'+esc(nm)+'</span>' +
+          '<span class="num">'+sz+'</span></div>').join("") +
         (pseudo ? '<p class="p" style="margin:16px 0 0;font-size:12px">Le registre est indispensable pour restaurer le document plus tard. Il est aussi enregistré dans le projet « '+esc(S.project.name)+' ».</p>' : "") +
       '</div>' +
       '<div class="sheet-foot">' +
-        '<button class="cta" data-act="share">Partager</button>' +
-        '<button class="txtcta" data-act="save">Enregistrer dans Fichiers</button>' +
+        '<button class="cta" data-act="download">' +
+          (files.length > 1 ? "Tout télécharger" : "Télécharger le document") + '</button>' +
       '</div>' +
-    '</div>');
-  }
-
-  if(id === "share"){
-    return (
-    '<div class="sheet">' +
-      '<div class="grab"><i></i></div>' +
-      '<div class="sheet-head"><span class="t">Partager</span>' +
-        '<button class="textbtn" data-act="close-sheet" style="min-height:0">Annuler</button></div>' +
-      '<div class="sheet-body pad20" style="padding-bottom:30px">' +
-        ["Mail","Messages","Fichiers","Copier le lien local"].map(t =>
-        '<button class="row" data-act="share-to" data-v="'+esc(t)+'">' +
-          '<span class="grow"><span class="t">'+esc(t)+'</span></span></button>').join("") + '</div>' +
     '</div>');
   }
   return "";
@@ -1537,9 +1554,12 @@ phone.addEventListener("click", (e) => {
     return;
   }
 
-  if(act === "share"){ openModal("share"); return; }
-  if(act === "share-to"){ closeModal(); toast("Envoyé vers " + v); return; }
-  if(act === "save"){ closeModal(); toast("2 fichiers enregistrés dans Fichiers"); return; }
+  if(act === "download"){
+    const k = S.mode === "pseudo" ? 2 : 1;
+    closeModal();
+    toast(k > 1 ? "2 fichiers téléchargés" : "Fichier téléchargé");
+    return;
+  }
   if(act === "app-theme"){ setAppTheme(v); return; }
   if(act === "toast"){ toast(v); return; }
   if(act === "new-project"){ toast("Nouveau projet — nommez-le, il retiendra les paires"); return; }
@@ -1563,12 +1583,13 @@ phone.addEventListener("keydown", (e) => {
 /* --- Gestes sur le document ---------------------------------------------- */
 let press = null;
 function viewing(){ return S.status === "running" || (S.status === "done" && S.view === "result"); }
-/* En restauration, les paires viennent du registre : rien à sélectionner. */
+/* En restauration, les paires viennent du registre : rien à sélectionner.
+   Dans l'aperçu non plus — mais un pseudonyme y reste interrogeable. */
 function creatable(){ return !viewing() && S.mode === "pseudo"; }
 
 phone.addEventListener("pointerdown", (e) => {
   const body = document.getElementById("docBody");
-  if(!body || !body.contains(e.target) || viewing()) return;
+  if(!body || !body.contains(e.target) || S.status === "running") return;
   const el = e.target.closest("[data-i]");
   if(!el) return;
   press = {x:e.clientX, y:e.clientY, el, fired:false, timer:null};
