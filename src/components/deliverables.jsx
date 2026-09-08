@@ -6,8 +6,10 @@ import { toast } from "sonner";
 import {
   downloadBlob,
   downloadToFolder,
-  isTauri,
+  isDesktopShell,
+  isMobileShell,
   saveRegistry,
+  saveToDocuments,
 } from "@/lib/backend";
 import { useAnonymizer } from "@/store/use-anonymizer";
 
@@ -41,7 +43,7 @@ export function Deliverables() {
     if (busy) return;
     setBusy(true);
     try {
-      if (isTauri() && written.length) {
+      if (isDesktopShell() && written.length) {
         const saved = await downloadToFolder(written);
         // `null` signale une annulation : rien a dire dans ce cas.
         if (saved) {
@@ -60,7 +62,22 @@ export function Deliverables() {
       const name = base + (pseudo ? "_pseudonymise.txt" : "_restaure.txt");
       const body = `${title ?? base}\n\n${resultParagraphs().join("\n\n")}`;
       // Le BOM garantit l'ouverture correcte des accents sous Windows.
-      downloadBlob(name, `﻿${body}`, "text/plain;charset=utf-8");
+      const texte = `﻿${body}`;
+
+      // Une webview de telephone ignore `<a download>` : le fichier s'ecrit
+      // dans les documents de l'appareil, ou le systeme sait le retrouver.
+      if (isMobileShell()) {
+        await saveToDocuments(name, texte);
+        if (pseudo) await saveRegistry(terms);
+        toast.success(
+          pseudo
+            ? "2 fichiers enregistrés dans Documents"
+            : "Fichier enregistré dans Documents",
+        );
+        return;
+      }
+
+      downloadBlob(name, texte, "text/plain;charset=utf-8");
       if (pseudo) await saveRegistry(terms);
       toast.success(pseudo ? "2 fichiers téléchargés" : "Fichier téléchargé");
     } catch (err) {

@@ -120,6 +120,18 @@ appuyer un bouton du bas d'une feuille faisait défiler le conteneur pour
 « révéler » ce bouton, et l'écran entier remontait. Un conteneur clippé n'est
 pas défilable.
 
+## Empaqueter
+
+`npm run tauri:build` produit l'installeur de la plateforme courante,
+`npm run android:build` l'APK et l'AAB, `npm run ios:build` l'IPA. Les projets
+natifs mobiles s'engendrent une fois par `npm run tauri android init` et
+`npm run tauri ios init`.
+
+Windows exige Windows et iOS exige macOS : `.github/workflows/paquets.yml`
+répartit donc le travail sur trois systèmes et rassemble les artefacts sous une
+même étiquette. Outils, comptes, signatures et différences mobiles :
+[docs/empaquetage.md](docs/empaquetage.md).
+
 ## État d'avancement
 
 L'interface est complète et fonctionnelle. Le backend Rust est déclaré mais pas

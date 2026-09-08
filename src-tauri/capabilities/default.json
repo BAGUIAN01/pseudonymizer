@@ -1,10 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permissions de l'application Anonymizer",
-  "windows": [
-    "main"
-  ],
+  "description": "Permissions communes à toutes les plateformes",
+  "windows": ["main"],
   "permissions": [
     "core:default",
     "dialog:default",
@@ -12,24 +10,11 @@
     "fs:default",
     {
       "identifier": "fs:allow-read-file",
-      "allow": [
-        {
-          "path": "**"
-        }
-      ]
+      "allow": [{ "path": "**" }]
     },
     {
       "identifier": "fs:allow-write-file",
-      "allow": [
-        {
-          "path": "$DOCUMENT/**"
-        },
-        {
-          "path": "$DOWNLOAD/**"
-        }
-      ]
-    },
-    "updater:default",
-    "process:allow-restart"
+      "allow": [{ "path": "$DOCUMENT/**" }, { "path": "$DOWNLOAD/**" }]
+    }
   ]
 }

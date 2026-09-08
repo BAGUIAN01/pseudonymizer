@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop",
+  "description": "Mise à jour et redémarrage : le bureau seulement. Sur téléphone, c'est le magasin qui livre les versions, et les greffons correspondants ne sont pas compilés.",
+  "platforms": ["linux", "macOS", "windows"],
+  "windows": ["main"],
+  "permissions": ["updater:default", "process:allow-restart"]
+}

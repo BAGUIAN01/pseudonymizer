@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { toast } from "sonner";
 
-import { isTauri } from "@/lib/backend";
+import { isDesktopShell } from "@/lib/backend";
 
 /**
  * Mise a jour de l'application.
@@ -29,7 +29,8 @@ export const useUpdater = create((set, get) => ({
    *   l'utilisateur si le bucket est injoignable ou deja a jour.
    */
   async check(silencieux = false) {
-    if (!isTauri() || get().status === "downloading") return;
+    // Sur telephone, c'est le magasin qui livre les versions.
+    if (!isDesktopShell() || get().status === "downloading") return;
 
     set({ status: "checking" });
     try {

@@ -1,0 +1,197 @@
+# Fabrique les paquets installables des quatre plateformes.
+#
+# Un depot ne peut pas tout produire depuis une seule machine : Windows exige
+# Windows, et iOS exige macOS et Xcode. Chaque cible a donc son execution, et
+# la publication les rassemble sous la meme etiquette.
+#
+# Les secrets attendus, et ce qui se passe sans eux :
+#
+#   TAURI_SIGNING_PRIVATE_KEY / _PASSWORD  signature de mise a jour (bureau).
+#                                          Absents : les paquets se construisent,
+#                                          mais l'application installee refusera
+#                                          les mises a jour automatiques.
+#   ANDROID_KEYSTORE / _PASSWORD / _ALIAS  signature de publication Android.
+#                                          Absents : l'APK est non signe, donc
+#                                          installable a la main mais pas
+#                                          publiable sur le magasin.
+#   APPLE_*                                signature et notarisation Apple.
+#                                          Absents : l'execution iOS est sautee.
+name: Paquets
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  bureau:
+    name: ${{ matrix.nom }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - nom: macOS (dmg universel)
+            os: macos-latest
+            args: "--target universal-apple-darwin"
+          - nom: Windows (exe, msi)
+            os: windows-latest
+            args: ""
+          - nom: Linux (deb, AppImage)
+            os: ubuntu-22.04
+            args: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Chaine Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # Tauri s'appuie sur la webview du systeme ; sous Linux elle se compile.
+      - name: Bibliotheques systeme (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - run: npm ci
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Pseudonymizer ${{ github.ref_name }}
+          releaseDraft: true
+          args: ${{ matrix.args }}
+
+  android:
+    name: Android (apk, aab)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: NDK
+        run: |
+          sdkmanager "ndk;27.0.12077973"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973" >> $GITHUB_ENV
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      # Le projet Gradle est engendre s'il n'est pas dans le depot. L'y
+      # commiter reste preferable : c'est la qu'on modifie le manifeste.
+      - name: Projet Android
+        run: |
+          if [ ! -d src-tauri/gen/android ]; then
+            npm run tauri android init -- --skip-targets-install
+          fi
+
+      - name: Clef de signature
+        if: ${{ env.ANDROID_KEYSTORE != '' }}
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+        run: |
+          echo "$ANDROID_KEYSTORE" | base64 -d > src-tauri/gen/android/release.jks
+          cat >> src-tauri/gen/android/keystore.properties <<PROPS
+          storeFile=release.jks
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEYSTORE_ALIAS }}
+          keyPassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          PROPS
+
+      - run: npm run android:build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: |
+            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+            src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
+
+  ios:
+    name: iOS (ipa)
+    runs-on: macos-latest
+    # Sans compte Apple, l'archive ne peut pas etre signee : l'execution est
+    # sautee plutot que d'echouer a chaque fois.
+    if: ${{ vars.APPLE_TEAM_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - name: Projet Xcode
+        run: |
+          if [ ! -d src-tauri/gen/apple ]; then
+            npm run tauri ios init
+          fi
+
+      - name: Trousseau de signature
+        env:
+          CERT: ${{ secrets.APPLE_CERTIFICATE }}
+          CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+        run: |
+          security create-keychain -p actions build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p actions build.keychain
+          echo "$CERT" | base64 -d > cert.p12
+          security import cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k actions build.keychain
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$PROFILE" | base64 -d > ~/Library/MobileDevice/Provisioning\ Profiles/build.mobileprovision
+
+      - name: Archive
+        env:
+          APPLE_DEVELOPMENT_TEAM: ${{ vars.APPLE_TEAM_ID }}
+        run: npm run ios:build -- --export-method app-store-connect
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: src-tauri/gen/apple/build/**/*.ipa

@@ -34,6 +34,12 @@ lopdf = "0.36.0"
 # `vec!`. Le pin est declare ici, et pas seulement dans Cargo.lock, pour qu'un
 # `cargo update` ne le defasse pas silencieusement.
 tinyvec = "=1.8.1"
+
+# La mise a jour et le redemarrage n'existent pas sur telephone : ce sont les
+# magasins qui livrent les versions. Declares hors des cibles mobiles, ces
+# deux greffons ne cassent pas la construction Android et iOS — ils ne s'y
+# compilent tout simplement pas.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2.11.0"
 tauri-plugin-process = "2.3.1"
 

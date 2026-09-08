@@ -24,6 +24,36 @@ export function isTauri() {
 }
 
 /**
+ * Vrai dans la coquille native d'un telephone : Android ou iOS.
+ *
+ * La distinction n'est pas cosmetique. Le selecteur de fichiers natif rend un
+ * chemin de disque sur un ordinateur ; sur un telephone, il rend une reference
+ * de fournisseur de contenu, que le systeme de fichiers ne sait pas relire de
+ * la meme facon. Le champ de fichier du navigateur, lui, rend les octets
+ * directement et se comporte partout pareil : c'est celui que la coquille
+ * mobile emprunte.
+ *
+ * L'agent utilisateur suffit a trancher, et evite d'ajouter un greffon pour
+ * une question a laquelle la webview repond deja.
+ */
+export function isMobileShell() {
+  if (!isTauri()) return false;
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+/**
+ * Vrai dans la coquille native d'un ordinateur.
+ *
+ * C'est le predicat de tout ce qui n'existe pas sur telephone : le selecteur
+ * de fichiers du systeme, la reecriture du document a cote de sa source, le
+ * choix d'un dossier de destination, et la mise a jour — dont les magasins se
+ * chargent.
+ */
+export function isDesktopShell() {
+  return isTauri() && !isMobileShell();
+}
+
+/**
  * Charge l'API Tauri a la demande : absente du bundle navigateur.
  *
  * Les modules sont renvoyes nommes, et surtout pas fusionnes : `dialog`, `fs`
@@ -56,7 +86,7 @@ const REGISTRY_ACCEPT = ".xlsx,.xls,.csv";
 
 /** Ouvre le selecteur natif et renvoie `{ name, bytes, path }`, ou null. */
 async function chooseFile(filters, accept) {
-  if (isTauri()) {
+  if (isDesktopShell()) {
     const { dialog, fs } = await tauri();
     const path = await dialog.open({ multiple: false, filters });
     if (!path) return null;
@@ -187,7 +217,7 @@ export async function readDroppedRegistry(file, path) {
  * @returns {Promise<{documentPath: string|null, registryPath: string|null}>}
  */
 export async function runProcessing({ document: doc, terms, reverse }) {
-  if (!isTauri() || !doc?.path) {
+  if (!isDesktopShell() || !doc?.path) {
     // Hors Tauri rien n'est ecrit sur le disque : le resultat s'obtient par
     // les boutons de telechargement, a partir du texte calcule cote client.
     return { documentPath: null, registryPath: null };
@@ -310,11 +340,51 @@ export function downloadBlob(name, content, mime) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
+/**
+ * Depose un livrable dans les documents de l'appareil, et l'ouvre.
+ *
+ * Une webview de telephone ignore `<a download>` : le lien ne declenche rien,
+ * et l'utilisateur repart sans son fichier. Le greffon de fichiers, lui,
+ * ecrit dans le dossier Documents de l'application — que le systeme expose
+ * dans son explorateur — puis le greffon d'ouverture laisse le systeme
+ * proposer ce qu'il sait en faire.
+ *
+ * @returns {Promise<string>} le chemin ecrit
+ */
+export async function saveToDocuments(name, contents) {
+  const [{ fs }, { documentDir, join }] = await Promise.all([
+    tauri(),
+    import("@tauri-apps/api/path"),
+  ]);
+
+  const bytes =
+    typeof contents === "string"
+      ? new TextEncoder().encode(contents)
+      : new Uint8Array(contents);
+
+  await fs.writeFile(name, bytes, { baseDir: fs.BaseDirectory.Document });
+  const full = await join(await documentDir(), name);
+
+  try {
+    const { opener } = await tauri();
+    await opener.openPath(full);
+  } catch {
+    // Aucune application pour ce type de fichier : le fichier est ecrit, ce
+    // qui est l'essentiel ; l'appelant le dira.
+  }
+  return full;
+}
+
 /** Enregistre le registre au format Excel. */
 export async function saveRegistry(terms) {
   const bytes = await buildRegistryWorkbook(terms);
+  const name = "Registre_correspondances.xlsx";
+  if (isMobileShell()) {
+    await saveToDocuments(name, bytes);
+    return;
+  }
   downloadBlob(
-    "Registre_correspondances.xlsx",
+    name,
     bytes,
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   );
