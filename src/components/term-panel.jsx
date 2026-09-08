@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { findOccurrences } from "@/lib/tokenize";
-import { familyLabel, TERM_TYPES, typeRgb } from "@/lib/types";
+import { familyLabel, TERM_TYPES, typeLabel, typeRgb } from "@/lib/types";
 import { useAnonymizer } from "@/store/use-anonymizer";
 import { Deliverables } from "@/components/deliverables";
 
@@ -217,7 +217,9 @@ function TermRow({ term, editable }) {
             size="sm"
             className="bg-paper w-full cursor-pointer rounded-md border text-[11px] font-semibold text-foreground"
           >
-            <SelectValue />
+            {/* Sans cette fonction, Base UI affiche la valeur brute :
+                le sélecteur montrait « TELEPHONE » et non « Téléphone ». */}
+            <SelectValue>{(v) => typeLabel(v)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {TERM_TYPES.map((type) => (

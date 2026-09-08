@@ -230,7 +230,9 @@ export function Scrim({ onClick }) {
   return (
     <button
       type="button"
-      aria-label="Fermer"
+      // Pas « Fermer » : le bandeau du document porte deja ce nom, et deux
+      // commandes homonymes se confondent a la lecture d'ecran.
+      aria-label="Fermer la feuille"
       onClick={onClick}
       className="absolute inset-0 z-30 cursor-default bg-black/40"
     />

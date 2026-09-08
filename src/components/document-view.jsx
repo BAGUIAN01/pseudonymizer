@@ -16,7 +16,7 @@ import {
   findOccurrences,
   phraseAt,
 } from "@/lib/tokenize";
-import { familyLabel, TERM_TYPES, typeRgb } from "@/lib/types";
+import { familyLabel, TERM_TYPES, typeLabel, typeRgb } from "@/lib/types";
 import { useAnonymizer } from "@/store/use-anonymizer";
 
 /**
@@ -327,7 +327,9 @@ function SelectionBar({ draft, onType, onConfirm, onCancel }) {
             size="sm"
             className="w-full cursor-pointer rounded-md border-0 bg-tint/6 text-[11px] font-semibold text-foreground"
           >
-            <SelectValue />
+            {/* Sans cette fonction, Base UI affiche la valeur brute :
+                le sélecteur montrait « TELEPHONE » et non « Téléphone ». */}
+            <SelectValue>{(v) => typeLabel(v)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {TERM_TYPES.map((item) => (

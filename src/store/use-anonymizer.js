@@ -25,8 +25,13 @@ const initialProcess = {
   deliverables: null,
 };
 
-/** Numero porte par un pseudonyme, s'il est de ce type : `[MONTANT_0003]` → 3. */
-const PSEUDO_RE = /^\[([A-Z]+)_(\d+)\]$/;
+/**
+ * Numero porte par un pseudonyme, s'il est de ce type : `[MONTANT_0003]` → 3.
+ *
+ * Les crochets sont facultatifs : un registre venu d'ailleurs peut ecrire
+ * `MONTANT_0003`, et son numero doit compter comme pris tout autant.
+ */
+const PSEUDO_RE = /^\[?([A-Z]+)_(\d+)\]?$/;
 
 function indexOfPseudo(pseudo, type) {
   const m = PSEUDO_RE.exec(pseudo ?? "");
@@ -145,8 +150,12 @@ export const useAnonymizer = create((set, get) => ({
             mode: get().mode,
           },
     });
-    // Retrouver son projet a l'ouverture fait partie de ne rien perdre.
-    if (activeId && projects.some((p) => p.id === activeId)) {
+    // Retrouver son projet a l'ouverture fait partie de ne rien perdre. Mais
+    // seulement a l'ouverture : cette fonction est rappelee chaque fois que
+    // l'ecran des projets est monte — a chaque passage par l'onglet, sur
+    // telephone — et selectionner a nouveau effacait le document en cours pour
+    // rouvrir celui d'avant.
+    if (activeId && !get().activeProjectId && projects.some((p) => p.id === activeId)) {
       get().selectProject(activeId);
     }
   },
@@ -197,10 +206,16 @@ export const useAnonymizer = create((set, get) => ({
     const project = get().projects.find((p) => p.id === id);
     if (!project) return;
 
-    // Changer de projet repart toujours d'une page blanche. Sans cette remise
-    // a zero inconditionnelle, le document du projet precedent restait a
-    // l'ecran — et donnait a croire qu'il appartenait au dossier qu'on venait
-    // d'ouvrir.
+    // Reselectionner le projet deja actif n'a rien a defaire. Sans ce garde,
+    // toucher son nom dans la liste effacait le document ouvert.
+    if (id === get().activeProjectId) return;
+
+    // Ce qui etait ouvert l'etait-il avant ce changement de projet ?
+    const enCours = Boolean(get().document);
+
+    // Changer de projet repart d'une page blanche. Sans cette remise a zero,
+    // le document du projet precedent restait a l'ecran — et donnait a croire
+    // qu'il appartenait au dossier qu'on venait d'ouvrir.
     set({
       activeProjectId: id,
       document: null,
@@ -233,8 +248,13 @@ export const useAnonymizer = create((set, get) => ({
     }
 
     // En pseudonymisation, rouvrir le dernier document evite de repartir de
-    // zero : sans lui, l'espace de travail reste ferme et le projet parait
-    // vide.
+    // zero a l'ouverture de l'application : sans lui, l'espace de travail
+    // reste ferme et le projet parait vide.
+    //
+    // Mais seulement si l'utilisateur n'avait rien ouvert. Rouvrir par-dessus
+    // son travail en cours revenait a lui rendre un document qu'il venait de
+    // remplacer, sans rien dire.
+    if (enCours) return;
     const last = project.documents?.[0];
     if (last) get().openStoredDocument(last);
   },

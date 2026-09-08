@@ -9,6 +9,8 @@
  * format d'origine en preservant la mise en page.
  */
 
+import { TERM_TYPES } from "@/lib/types";
+
 /** Formats reconnus, dans l'ordre ou ils sont proposes a l'utilisateur. */
 export const SUPPORTED_FORMATS = ["pdf", "docx", "xlsx", "txt"];
 
@@ -244,6 +246,21 @@ function normalizeHeader(value) {
     .trim();
 }
 
+/**
+ * Type porte par le prefixe d'un pseudonyme : `[MONTANT_0003]` → MONTANT.
+ *
+ * Les crochets sont facultatifs : un registre venu d'ailleurs peut ecrire
+ * `MONTANT_0003`. Un prefixe inconnu ne decide de rien — on ne va pas inventer
+ * une categorie a partir d'un mot qui ressemble a un type.
+ */
+const TYPES_CONNUS = new Set(TERM_TYPES.map((t) => t.value));
+const PREFIXE_RE = /^\[?([A-Z]+)_\d+\]?$/;
+
+function typeDepuisPseudo(pseudo) {
+  const m = PREFIXE_RE.exec(String(pseudo ?? "").trim().toUpperCase());
+  return m && TYPES_CONNUS.has(m[1]) ? m[1] : null;
+}
+
 const HEADER_ALIASES = {
   text: ["donnee personnelle", "donnee", "valeur", "original", "texte"],
   type: ["type", "categorie", "nature"],
@@ -291,11 +308,28 @@ export async function readRegistry(bytes) {
 
   return rows
     .slice(hasHeader ? 1 : 0)
-    .map((row) => ({
-      text: String(row[iText] ?? "").trim(),
-      type: (String(row[iType] ?? "").trim() || "PERSONNE").toUpperCase(),
-      pseudo: String(row[iPseudo] ?? "").trim(),
-    }))
+    .map((row) => {
+      const pseudo = String(row[iPseudo] ?? "").trim();
+      const colonne = String(row[iType] ?? "")
+        .trim()
+        .toUpperCase();
+
+      return {
+        text: String(row[iText] ?? "").trim(),
+        // Le prefixe du pseudonyme fait foi, la colonne ne sert qu'a defaut.
+        //
+        // C'est lui qui figure dans le document et que la restauration
+        // reconnait ; c'est lui, aussi, qui dit quel numero est deja pris
+        // pour cette categorie. S'en remettre a la seule colonne faisait
+        // basculer en « Personne » tout un registre qui n'en avait pas — et
+        // le numero 0001 de « [MONTANT_0001] » passait alors pour libre, si
+        // bien qu'un montant ajoute ensuite recevait le meme pseudonyme.
+        type:
+          typeDepuisPseudo(pseudo) ??
+          (TYPES_CONNUS.has(colonne) ? colonne : "PERSONNE"),
+        pseudo,
+      };
+    })
     .filter((entry) => entry.text && entry.pseudo);
 }
 
