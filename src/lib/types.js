@@ -60,6 +60,19 @@ export function familyLabel(value) {
 }
 
 /**
+ * Le pseudonyme tel qu'il se lit dans le document, sans ses crochets.
+ *
+ * Ils delimitent le jeton dans un fichier texte, ou rien d'autre ne le
+ * signale. A l'ecran, le fond teinte de la marque fait deja ce travail : les
+ * garder alourdissait un document de restauration, ou chaque terme est un
+ * pseudonyme. Le texte, lui, n'est pas touche — c'est bien `[TYPE_0001]` qui
+ * est cherche et remplace.
+ */
+export function bareLabel(pseudo) {
+  return String(pseudo ?? "").replace(/^\[/, "").replace(/\]$/, "");
+}
+
+/**
  * Construit un pseudonyme au format `[TYPE_0001]`.
  * L'index est calcule par type, comme dans le logiciel existant.
  */

@@ -6,7 +6,7 @@ import { Deliverables } from "@/components/deliverables";
 import { Input } from "@/components/ui/input";
 import { guessType } from "@/lib/detect";
 import { buildMarks, entityRangeAt, findOccurrences, phraseAt } from "@/lib/tokenize";
-import { familyLabel, TERM_TYPES, typeLabel, typeRgb } from "@/lib/types";
+import { bareLabel, familyLabel, TERM_TYPES, typeLabel, typeRgb } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useAnonymizer } from "@/store/use-anonymizer";
 import { CloseButton, Scrim, Sheet } from "./sheet";
@@ -504,7 +504,9 @@ function renderParagraph({ tokens, p, marks, draft, resultat, pseudo }) {
             style={{ "--mark": typeRgb(term.type) }}
             className="term-mark rounded-[5px] px-[3px] py-0.5 text-strong underline decoration-2 underline-offset-4"
           >
-            {original}
+            {/* En restauration, le texte marque est un pseudonyme : le fond
+                teinte le delimite deja, les crochets font double emploi. */}
+            {pseudo ? original : bareLabel(original)}
           </span>
         ),
       );

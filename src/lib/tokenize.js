@@ -17,18 +17,27 @@ export const WORD_RE =
 /**
  * Decoupe un paragraphe en tokens `{ text, word }`.
  * Les separateurs (espaces, ponctuation) sont conserves avec `word: false`.
+ *
+ * Ils le sont caractere par caractere, et non par groupes. Un groupe « [ »
+ * precede d'une espace formait un seul token : impossible alors d'etendre une
+ * occurrence jusqu'au crochet sans avaler l'espace qui le precede. Le decoupage
+ * fin coute quelques tokens de plus et rend la borne exacte.
  */
 export function tokenize(text) {
   const out = [];
   let last = 0;
   let m;
+  const separateurs = (chunk) => {
+    for (const c of chunk) out.push({ text: c, word: false });
+  };
+
   WORD_RE.lastIndex = 0;
   while ((m = WORD_RE.exec(text))) {
-    if (m.index > last) out.push({ text: text.slice(last, m.index), word: false });
+    if (m.index > last) separateurs(text.slice(last, m.index));
     out.push({ text: m[0], word: true });
     last = m.index + m[0].length;
   }
-  if (last < text.length) out.push({ text: text.slice(last), word: false });
+  if (last < text.length) separateurs(text.slice(last));
   return out;
 }
 
@@ -84,9 +93,23 @@ export function phraseAt(doc, p, from, to) {
  * @returns {Array<{p: number, from: number, to: number}>}
  */
 export function findOccurrences(doc, phrase) {
-  const words = (String(phrase).match(WORD_RE) ?? []).map(normaliseWord);
+  const source = String(phrase);
+  const words = (source.match(WORD_RE) ?? []).map(normaliseWord);
   const hits = [];
   if (!words.length) return hits;
+
+  // Bornes non-mot de l'expression : les crochets de « [TYPE_0001] », le
+  // « + » d'un numero international. Elles appartiennent a l'occurrence, et
+  // les laisser dehors les laissait hors du surlignage comme du remplacement
+  // — « +221 77 812 44 09 » devenait « +[TELEPHONE_0001] », et l'apercu d'une
+  // restauration montrait « [SahelTech Industries] ».
+  const LETTRE = /[0-9A-Za-zÀ-ÖØ-öø-ÿ]/;
+  const premier = source.search(LETTRE);
+  const caracteres = [...source];
+  let dernier = caracteres.length - 1;
+  while (dernier >= 0 && !LETTRE.test(caracteres[dernier])) dernier -= 1;
+  const avant = premier > 0 ? [...source.slice(0, premier)] : [];
+  const apres = dernier < source.length - 1 ? [...source.slice(dernier + 1)] : [];
 
   doc.forEach((tokens, p) => {
     const idx = wordIndexes(tokens);
@@ -98,7 +121,26 @@ export function findOccurrences(doc, phrase) {
           break;
         }
       }
-      if (ok) hits.push({ p, from: idx[k], to: idx[k + words.length - 1] });
+      if (!ok) continue;
+
+      let from = idx[k];
+      let to = idx[k + words.length - 1];
+
+      // Chaque caractere de bordure doit se retrouver, dans l'ordre, sur un
+      // token de separation voisin : une correspondance approximative
+      // deplacerait la borne sans qu'on s'en apercoive.
+      for (let c = avant.length - 1; c >= 0; c -= 1) {
+        const precedent = tokens[from - 1];
+        if (!precedent || precedent.word || precedent.text !== avant[c]) break;
+        from -= 1;
+      }
+      for (let c = 0; c < apres.length; c += 1) {
+        const suivant = tokens[to + 1];
+        if (!suivant || suivant.word || suivant.text !== apres[c]) break;
+        to += 1;
+      }
+
+      hits.push({ p, from, to });
     }
   });
   return hits;

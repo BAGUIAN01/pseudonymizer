@@ -158,9 +158,14 @@ tolérance près (casse, accents, libellés voisins) et un repli sur l'ordre des
 colonnes. Un fichier d'exemple du dossier `Registres` reste nécessaire pour
 confirmer l'interopérabilité avec le logiciel existant.
 
-### Limite connue
+### Bordures d'une occurrence
 
-Le `+` d'un numéro international n'appartient pas à un token de mot : il reste
-donc hors du surlignage et hors du remplacement (`+221 77 812 44 09` devient
-`+ [TELEPHONE_0001]`). À traiter dans la substitution Rust, qui travaille sur le
-texte brut et peut absorber le caractère adjacent.
+Une occurrence ne s'arrête plus au premier et au dernier mot : elle s'étend aux
+caractères non-mot que l'expression cherchée porte à ses extrémités. Sans cela,
+le `+` d'un numéro international restait hors du surlignage et hors du
+remplacement — `+221 77 812 44 09` sortait en `+[TELEPHONE_0001]` — et l'aperçu
+d'une restauration montrait `[SahelTech Industries]`, crochets compris.
+
+Les séparateurs sont pour cela découpés caractère par caractère : groupés, un
+`« [ »` précédé d'une espace formait un seul token, et étendre l'occurrence
+jusqu'au crochet aurait avalé l'espace.

@@ -19,11 +19,13 @@ const PATTERNS = [
     // Au moins deux groupes separes sont exiges, faute de quoi une suite de
     // chiffres collee comme un NINEA serait prise pour un numero.
     //
-    // Le `+` initial n'est volontairement pas capture : il n'appartient pas a
-    // un token de mot, et l'inclure decalerait le surlignage par rapport au
-    // texte reellement remplace.
+    // Le `+` initial est capture. Il ne l'etait pas tant qu'une occurrence
+    // s'arretait au premier et au dernier token de mot : il restait alors hors
+    // du surlignage et hors du remplacement, et le document sortait avec
+    // « +[TELEPHONE_0001] ». `findOccurrences` sait desormais etendre une
+    // occurrence a ses bordures.
     type: "TELEPHONE",
-    re: /(?:\d{2,3}[\s.-]){2,}\d{2,3}/g,
+    re: /\+?(?:\d{2,3}[\s.-]){2,}\d{2,3}/g,
     validate: (s) => s.replace(/\D/g, "").length >= 9,
   },
   {

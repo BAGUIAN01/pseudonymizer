@@ -16,7 +16,7 @@ import {
   findOccurrences,
   phraseAt,
 } from "@/lib/tokenize";
-import { familyLabel, TERM_TYPES, typeLabel, typeRgb } from "@/lib/types";
+import { bareLabel, familyLabel, TERM_TYPES, typeLabel, typeRgb } from "@/lib/types";
 import { useAnonymizer } from "@/store/use-anonymizer";
 
 /**
@@ -415,7 +415,9 @@ function renderParagraph({ tokens, p, marks, resultView, pseudo, removeTerm }) {
             }}
             className="term-mark cursor-pointer rounded-md px-[5px] py-0.5 text-strong underline decoration-2 underline-offset-4 transition-colors"
           >
-            {original}
+            {/* En restauration, le texte marque est un pseudonyme : le fond
+                teinte le delimite deja, les crochets font double emploi. */}
+            {pseudo ? original : bareLabel(original)}
           </span>,
         );
       }
