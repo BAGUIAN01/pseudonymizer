@@ -9,24 +9,26 @@ import { buildMarks, entityRangeAt, findOccurrences, phraseAt } from "@/lib/toke
 import { familyLabel, TERM_TYPES, typeLabel, typeRgb } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useAnonymizer } from "@/store/use-anonymizer";
-import { Scrim, Sheet } from "./sheet";
+import { CloseButton, Scrim, Sheet } from "./sheet";
 
-/** Duree au-dela de laquelle un appui devient un appui long. */
-const LONG_PRESS = 420;
+/** Paliers de la liste : fermee, a moitie, presque pleine. */
+const SNAPS = [0, 0.56, 0.88];
+
 /** Deplacement au-dela duquel le geste est un defilement, pas un appui. */
 const SLOP = 10;
 
 /**
  * Espace de travail tactile.
  *
- * La selection au curseur du bureau — glisser sur le texte, double-cliquer un
- * nom — n'a pas d'equivalent au doigt : le glissement fait defiler et le
- * double-tap zoome. Elle est donc remplacee par deux gestes : un appui prend
- * le mot, un appui long prend l'entite qui l'entoure.
+ * La selection au curseur du bureau n'a pas d'equivalent invente : c'est la
+ * selection du systeme, avec ses poignees, qui la remplace. Un appui prend
+ * le mot ; une selection etendue prend exactement ce qu'elle couvre — sans
+ * quoi « 12 rue Carnot, Dakar » resterait incapturable, n'etant ni un mot
+ * seul ni une entite capitalisee.
  *
- * La barre de confirmation ancree a la selection devient une feuille basse :
- * a 400 px de large et posee pres du texte, elle tombait hors de portee du
- * pouce et sous le clavier.
+ * Le bandeau tient sur une ligne, et le bas de l'ecran porte deux objets
+ * flottants de la meme geometrie que les onglets de l'accueil : a gauche
+ * l'etat du travail, a droite l'action.
  */
 export function Workspace() {
   const doc = useAnonymizer((s) => s.doc);
@@ -35,7 +37,7 @@ export function Workspace() {
   const view = useAnonymizer((s) => s.view);
   const status = useAnonymizer((s) => s.status);
   const progress = useAnonymizer((s) => s.progress);
-  const document = useAnonymizer((s) => s.document);
+  const document_ = useAnonymizer((s) => s.document);
   const addTerm = useAnonymizer((s) => s.addTerm);
   const setView = useAnonymizer((s) => s.setView);
   const reset = useAnonymizer((s) => s.reset);
@@ -45,10 +47,13 @@ export function Workspace() {
   const [openTerm, setOpenTerm] = useState(null);
   const [livrablesFermes, setLivrablesFermes] = useState(false);
   const [snap, setSnap] = useState(0);
+  const [hint, setHint] = useState(true);
   const [barHeight, setBarHeight] = useState(0);
 
   const barRef = useRef(null);
+  const bodyRef = useRef(null);
   const press = useRef(null);
+  const ignoreSelection = useRef(false);
 
   const pseudo = mode === "pseudo";
   const running = status === "running";
@@ -57,61 +62,101 @@ export function Workspace() {
 
   const marks = useMemo(() => buildMarks(terms), [terms]);
   const terme = terms.find((t) => t.id === openTerm) ?? null;
+  const livrables = status === "done" && !livrablesFermes;
+  const occurrences = terms.reduce((k, t) => k + t.hits.length, 0);
 
   // Le bandeau flotte au-dessus du texte : le corps se decale de sa hauteur,
-  // mesuree plutot que devinee — elle change avec l'invite et l'apercu.
+  // mesuree plutot que devinee — elle change avec l'invite.
   useLayoutEffect(() => {
     const el = barRef.current;
     if (!el) return;
     const observer = new ResizeObserver(() => setBarHeight(el.offsetHeight));
     observer.observe(el);
-    setBarHeight(el.offsetHeight);
     return () => observer.disconnect();
   }, []);
 
-  // Les livrables s'annoncent d'eux-memes une fois le traitement fini : c'est
-  // une deduction de l'etat, pas un effet — l'utilisateur peut les refermer,
-  // et un nouveau traitement les represente.
-  const livrables = status === "done" && !livrablesFermes;
-
-  const lancer = useCallback(() => {
-    setLivrablesFermes(false);
-    run();
-  }, [run]);
-
   const capture = useCallback(
-    (p, from, to) => {
+    (p, from, to, anchor) => {
       const text = phraseAt(doc, p, from, to).trim();
       if (!text) return;
       setDraft({
         p,
         from,
         to,
+        anchor: anchor ?? from,
         text,
         type: guessType(text),
         count: findOccurrences(doc, text).length,
       });
+      setHint(false);
       navigator.vibrate?.(8);
     },
     [doc],
   );
 
+  /**
+   * Ramene la selection du systeme a une plage de jetons, recalee sur des
+   * mots et bornee au premier paragraphe : ce qui est capture est ce qui
+   * s'affiche.
+   */
+  const readSelection = useCallback(() => {
+    if (!selectable) return false;
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || !selection.rangeCount) return false;
+
+    const range = selection.getRangeAt(0);
+    const body = bodyRef.current;
+    if (!body?.contains(range.commonAncestorContainer)) return false;
+
+    const startEl = tokenElement(range.startContainer);
+    if (!startEl) return false;
+    const p = Number(startEl.dataset.p);
+    const tokens = doc[p];
+    if (!tokens) return false;
+
+    const endEl = tokenElement(range.endContainer);
+    let from = Number(startEl.dataset.i);
+    let to =
+      endEl && Number(endEl.dataset.p) === p
+        ? Number(endEl.dataset.i)
+        : tokens.length - 1;
+    if (to < from) [from, to] = [to, from];
+
+    while (from <= to && !tokens[from].word) from += 1;
+    while (to >= from && !tokens[to].word) to -= 1;
+    if (to < from) return false;
+
+    // Capturer efface la selection, ce qui declenche a son tour un evenement
+    // de selection : on l'ignore, faute de quoi les deux se relancent.
+    ignoreSelection.current = true;
+    selection.removeAllRanges();
+    capture(p, from, to);
+    window.setTimeout(() => {
+      ignoreSelection.current = false;
+    }, 60);
+    return true;
+  }, [capture, doc, selectable]);
+
+  // Les poignees se relachent souvent hors du document : seul l'evenement de
+  // selection le dit.
+  useEffect(() => {
+    let timer = null;
+    function onSelectionChange() {
+      if (ignoreSelection.current || draft) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(readSelection, 220);
+    }
+    document.addEventListener("selectionchange", onSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", onSelectionChange);
+      window.clearTimeout(timer);
+    };
+  }, [draft, readSelection]);
+
   function onPointerDown(event) {
     const el = event.target.closest?.("[data-i]");
-    if (!el || running || resultat) return;
-
-    const p = Number(el.dataset.p);
-    const i = Number(el.dataset.i);
-    const state = { x: event.clientX, y: event.clientY, el, fired: false, timer: null };
-    press.current = state;
-
-    if (!el.dataset.term && selectable && doc[p]?.[i]?.word) {
-      state.timer = window.setTimeout(() => {
-        state.fired = true;
-        const range = entityRangeAt(doc, p, i);
-        if (range) capture(p, range.from, range.to);
-      }, LONG_PRESS);
-    }
+    if (!el || running) return;
+    press.current = { x: event.clientX, y: event.clientY, el };
   }
 
   function onPointerMove(event) {
@@ -121,7 +166,6 @@ export function Workspace() {
       Math.abs(event.clientX - state.x) > SLOP ||
       Math.abs(event.clientY - state.y) > SLOP
     ) {
-      window.clearTimeout(state.timer);
       press.current = null;
     }
   }
@@ -130,8 +174,9 @@ export function Workspace() {
     const state = press.current;
     press.current = null;
     if (!state) return;
-    window.clearTimeout(state.timer);
-    if (state.fired) return;
+
+    // Une selection etendue prime sur l'appui : c'est elle qu'on capture.
+    if (readSelection()) return;
 
     const { el } = state;
     if (el.dataset.term) {
@@ -142,80 +187,85 @@ export function Workspace() {
 
     const p = Number(el.dataset.p);
     const i = Number(el.dataset.i);
-    if (doc[p]?.[i]?.word) capture(p, i, i);
+    if (doc[p]?.[i]?.word) capture(p, i, i, i);
   }
 
-  function confirmDraft() {
-    if (!draft) return;
-    addTerm(draft.p, draft.from, draft.to, draft.type);
-    setDraft(null);
+  /** Amene le premier surlignage d'un terme sous les yeux, et le fait battre. */
+  const locate = useCallback((id) => {
+    const el = bodyRef.current?.querySelector(`[data-term="${id}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    el.classList.add("term-locate");
+    window.setTimeout(() => el.classList.remove("term-locate"), 2400);
+  }, []);
+
+  function openTermFromList(id) {
+    setSnap(0);
+    locate(id);
+    setOpenTerm(id);
   }
 
-  const modale = draft || terme || livrables;
+  const lancer = useCallback(() => {
+    setLivrablesFermes(false);
+    setSnap(0);
+    run();
+  }, [run]);
+
+  const modale = Boolean(draft || terme || livrables);
 
   return (
     <div className="screen-push bg-paper relative flex h-full flex-col overflow-clip">
       <div ref={barRef} className="glass glass-bar absolute inset-x-0 top-0 z-20">
-        <header className="flex flex-col gap-1.5 px-5 pt-[calc(env(safe-area-inset-top,0px)+14px)] pb-3">
-          <div className="flex items-center justify-between gap-3.5">
-            <button
-              type="button"
-              onClick={reset}
-              className="cursor-pointer font-mono text-[9.5px] font-semibold tracking-[0.16em] text-dim uppercase"
+        <header className="flex items-center gap-3 px-5 pt-[calc(env(safe-area-inset-top,0px)+12px)] pb-3">
+          <button
+            type="button"
+            onClick={reset}
+            className="flex flex-none cursor-pointer items-center gap-1.5 rounded-full bg-tint/9 py-[7px] pr-3 pl-[9px] text-[12.5px] font-bold text-strong"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
             >
-              Fermer
-            </button>
-            <span className="font-mono text-[9.5px] tracking-[0.16em] text-faint uppercase">
-              {pseudo ? "Pseudonymisation" : "Restauration"}
-            </span>
-          </div>
-          <p className="text-[15px] font-semibold break-words text-strong">
-            {document?.fileName ?? "Document"}
-          </p>
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
+            Fermer
+          </button>
+          <span className="flex-1 truncate text-center text-[13px] font-semibold text-strong">
+            {document_?.fileName ?? "Document"}
+          </span>
+          <span className="flex-none font-mono text-[9.5px] tracking-[0.16em] text-faint">
+            {pseudo ? "01" : "02"}
+          </span>
         </header>
 
-        {status === "done" ? (
-          <div className="flex gap-5 px-5 pb-[11px]">
-            {[
-              ["source", "Document"],
-              ["result", pseudo ? "Pseudonymisé" : "Restauré"],
-            ].map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setView(value)}
-                aria-pressed={view === value}
-                className={cn(
-                  "cursor-pointer py-0.5 text-[13px] font-semibold underline-offset-[7px] decoration-2",
-                  view === value
-                    ? "text-accent-strong font-bold text-strong underline decoration-current"
-                    : "text-faint",
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        ) : (
+        {hint && !resultat && (
           <p className="px-5 pb-3 text-[12px] text-faint">
             {pseudo
-              ? "Appuyez un mot · maintenez pour l’entité entière"
+              ? "Appuyez un mot, ou sélectionnez plusieurs mots"
               : "Correspondances du registre · appuyez pour inspecter"}
           </p>
         )}
       </div>
 
       <div
+        ref={bodyRef}
         style={{ paddingTop: barHeight }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain select-none"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
       >
-        <article className="px-5 pt-4 pb-[132px]">
+        <article className="px-5 pt-4 pb-[132px] [-webkit-user-select:text] select-text">
           <h2 className="mb-4 text-[17px] font-bold tracking-[-0.028em] text-balance text-strong">
-            {document?.title ?? "Document"}
+            {document_?.title ?? "Document"}
           </h2>
           {doc.map((tokens, p) => (
             <p
@@ -228,7 +278,7 @@ export function Workspace() {
         </article>
       </div>
 
-      {running && (
+      {running ? (
         <div className="bg-paper absolute inset-0 z-40 flex flex-col items-center justify-center gap-5 p-10">
           <span className="border-primary/15 border-t-primary size-[30px] animate-spin rounded-full border-2" />
           <p className="font-mono text-[9.5px] tracking-[0.16em] text-faint uppercase">
@@ -241,16 +291,34 @@ export function Workspace() {
             />
           </div>
         </div>
+      ) : (
+        <WorkDock
+          done={status === "done"}
+          resultat={resultat}
+          pseudo={pseudo}
+          terms={terms}
+          onList={() => setSnap(1)}
+          onRun={lancer}
+          onView={setView}
+          onLivrables={() => setLivrablesFermes(false)}
+        />
       )}
 
-      <TermsSheet snap={snap} onSnap={setSnap} onTerm={setOpenTerm} onRun={lancer} />
+      <TermsSheet
+        snap={snap}
+        onSnap={setSnap}
+        onTerm={openTermFromList}
+        onRun={lancer}
+        count={occurrences}
+      />
 
-      {modale && (
+      {(modale || snap > 0) && (
         <Scrim
           onClick={() => {
             setDraft(null);
             setOpenTerm(null);
             setLivrablesFermes(true);
+            setSnap(0);
           }}
         />
       )}
@@ -258,8 +326,16 @@ export function Workspace() {
       {draft && (
         <DraftSheet
           draft={draft}
+          doc={doc}
           onType={(type) => setDraft((d) => (d ? { ...d, type } : d))}
-          onConfirm={confirmDraft}
+          onWiden={() => {
+            const range = entityRangeAt(doc, draft.p, draft.anchor);
+            if (range) capture(draft.p, range.from, range.to, draft.anchor);
+          }}
+          onConfirm={() => {
+            addTerm(draft.p, draft.from, draft.to, draft.type);
+            setDraft(null);
+          }}
           onClose={() => setDraft(null)}
         />
       )}
@@ -269,18 +345,114 @@ export function Workspace() {
       )}
 
       {livrables && !draft && !terme && (
-        <LivrablesSheet onClose={() => setLivrablesFermes(true)} />
+        <Sheet
+          title="Livrables prêts"
+          subtitle={pseudo ? "Le document et son registre" : "Le document restauré"}
+          onClose={() => setLivrablesFermes(true)}
+        >
+          <div className="px-5 pb-8">
+            <Deliverables />
+          </div>
+        </Sheet>
+      )}
+    </div>
+  );
+}
+
+/** Remonte d'un noeud du document au jeton qui le porte. */
+function tokenElement(node) {
+  const el = node?.nodeType === 3 ? node.parentElement : node;
+  return el?.closest?.("[data-i]") ?? null;
+}
+
+/**
+ * Bas de l'espace de travail : l'etat du travail a gauche, l'action a droite.
+ *
+ * Une fois le traitement fait, les memes deux places portent la bascule
+ * d'apercu et l'acces aux livrables.
+ */
+function WorkDock({ done, resultat, pseudo, terms, onList, onRun, onView, onLivrables }) {
+  const familles = [];
+  terms.forEach((t) => {
+    const rgb = typeRgb(t.type);
+    if (!familles.includes(rgb)) familles.push(rgb);
+  });
+
+  return (
+    <div className="pointer-events-none absolute inset-x-5 bottom-[calc(env(safe-area-inset-bottom,0px)+22px)] z-30 flex items-center gap-2.5">
+      {done ? (
+        <>
+          <div className="glass pointer-events-auto flex flex-none gap-1 rounded-[20px] p-1">
+            {[
+              ["source", "Document"],
+              ["result", pseudo ? "Pseudonymisé" : "Restauré"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onView(value)}
+                aria-current={
+                  (value === "result") === resultat ? "page" : undefined
+                }
+                className={cn(
+                  "cursor-pointer rounded-2xl px-3 py-2.5 text-[12.5px] font-bold transition-colors",
+                  (value === "result") === resultat
+                    ? "bg-primary text-primary-foreground"
+                    : "text-dim",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={onLivrables}
+            className="bg-primary text-primary-foreground pointer-events-auto flex-1 cursor-pointer rounded-[20px] px-4 py-[13px] text-[13px] font-bold shadow-[var(--shadow-panel)]"
+          >
+            Livrables
+          </button>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={onList}
+            className="glass pointer-events-auto flex flex-none cursor-pointer items-center gap-2.5 rounded-[20px] px-[15px] py-[13px] text-[13px] font-bold text-strong"
+          >
+            {familles.length > 0 && (
+              <span className="flex gap-[3px]" aria-hidden>
+                {familles.map((rgb) => (
+                  <span
+                    key={rgb}
+                    style={{ "--mark": rgb }}
+                    className="term-dot size-[7px] rounded-full"
+                  />
+                ))}
+              </span>
+            )}
+            {terms.length} terme{terms.length > 1 ? "s" : ""}
+          </button>
+          <button
+            type="button"
+            onClick={onRun}
+            disabled={!terms.length}
+            className="bg-primary text-primary-foreground pointer-events-auto flex-1 cursor-pointer rounded-[20px] px-4 py-[13px] text-[13px] font-bold shadow-[var(--shadow-panel)] disabled:opacity-50"
+          >
+            {pseudo ? "Pseudonymiser" : "Restaurer"}
+          </button>
+        </>
       )}
     </div>
   );
 }
 
 /**
- * Rendu d'un paragraphe, token par token.
+ * Rendu d'un paragraphe, jeton par jeton.
  *
- * Chaque span porte sa position : c'est ce qui permet de ramener un appui a
- * une plage de tokens. Les tokens couverts par une occurrence sont fusionnes
- * en un seul span, comme au bureau.
+ * Chaque span porte sa position : c'est ce qui permet de ramener un appui ou
+ * une selection a une plage de jetons. Dans l'apercu, un pseudonyme reste
+ * interrogeable — il dit ce qu'il remplace.
  */
 function renderParagraph({ tokens, p, marks, draft, resultat, pseudo }) {
   const nodes = [];
@@ -315,6 +487,9 @@ function renderParagraph({ tokens, p, marks, draft, resultat, pseudo }) {
         resultat ? (
           <span
             key={i}
+            data-term={term.id}
+            data-p={p}
+            data-i={i}
             style={{ "--mark": typeRgb(term.type) }}
             className="term-pseudo rounded-[5px] px-[5px] py-0.5 font-mono text-[12.5px] text-strong"
           >
@@ -375,9 +550,7 @@ function TypeOptions({ value, onChange, locked }) {
             style={{ "--mark": typeRgb(type.value) }}
             className={cn(
               "flex flex-none cursor-pointer items-center gap-[7px] py-1.5 text-[13px] whitespace-nowrap underline-offset-[7px] decoration-2",
-              actif
-                ? "term-underline font-bold text-strong underline"
-                : "text-dim",
+              actif ? "term-underline font-bold text-strong underline" : "text-dim",
             )}
           >
             <span className="term-dot size-[7px] flex-none rounded-full" />
@@ -389,13 +562,14 @@ function TypeOptions({ value, onChange, locked }) {
   );
 }
 
-/** Panneau des correspondances : permanent, a trois paliers. */
-function TermsSheet({ snap, onSnap, onTerm, onRun }) {
+/** Liste des correspondances : permanente, a trois paliers. */
+function TermsSheet({ snap, onSnap, onTerm, onRun, count }) {
   const terms = useAnonymizer((s) => s.terms);
   const mode = useAnonymizer((s) => s.mode);
   const status = useAnonymizer((s) => s.status);
   const doc = useAnonymizer((s) => s.doc);
   const addTermByText = useAnonymizer((s) => s.addTermByText);
+  const openRegistry = useAnonymizer((s) => s.openRegistry);
 
   const [query, setQuery] = useState("");
   const pseudo = mode === "pseudo";
@@ -409,40 +583,38 @@ function TermsSheet({ snap, onSnap, onTerm, onRun }) {
 
   return (
     <Sheet
-      snaps={[64, 0.52, 0.86]}
+      snaps={SNAPS}
       index={snap}
       onIndex={onSnap}
-      header={
+      onClose={() => onSnap(0)}
+      title="Correspondances"
+      subtitle={
+        terms.length
+          ? `${terms.length} terme${terms.length > 1 ? "s" : ""} · ${count} occurrence${count > 1 ? "s" : ""}`
+          : "Aucun terme pour l’instant"
+      }
+      footer={
         <>
-          <span className="flex-1 text-[15px] font-bold tracking-[-0.02em] text-strong">
-            Correspondances
-          </span>
-          <span className="font-mono text-[10.5px] whitespace-nowrap text-faint">
-            {terms.length} terme{terms.length > 1 ? "s" : ""}
-          </span>
           <button
             type="button"
             onClick={onRun}
             disabled={status === "running"}
-            className="text-accent-strong cursor-pointer font-mono text-[9.5px] font-semibold tracking-[0.16em] uppercase disabled:opacity-40"
+            className="bg-primary text-primary-foreground w-full cursor-pointer rounded-xl px-4 py-4 text-[14px] font-bold disabled:opacity-50"
           >
-            Traiter
+            {pseudo ? "Pseudonymiser le document" : "Restaurer le document"}
+          </button>
+          <button
+            type="button"
+            onClick={openRegistry}
+            className="w-full cursor-pointer py-3.5 text-center text-[13px] font-semibold text-dim"
+          >
+            Importer un registre
           </button>
         </>
       }
-      footer={
-        <button
-          type="button"
-          onClick={onRun}
-          disabled={status === "running"}
-          className="bg-primary text-primary-foreground w-full cursor-pointer rounded-xl px-4 py-4 text-[14px] font-bold disabled:opacity-50"
-        >
-          {pseudo ? "Pseudonymiser le document" : "Restaurer le document"}
-        </button>
-      }
     >
       {pseudo && (
-        <div className="flex items-center gap-3.5 px-5 pt-1.5 pb-3.5">
+        <div className="flex items-center gap-3.5 px-5 pt-3 pb-3.5">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -509,9 +681,7 @@ function TermsSheet({ snap, onSnap, onTerm, onRun }) {
         ))
       ) : (
         <div className="flex flex-col gap-2 px-5 pt-8 pb-3">
-          <p className="text-[13px] font-semibold text-dim">
-            Aucune correspondance
-          </p>
+          <p className="text-[13px] font-semibold text-dim">Aucune correspondance</p>
           <p className="text-[13px] leading-[1.6] text-faint">
             {pseudo
               ? "Appuyez un mot du document pour créer la première. Toutes ses occurrences seront traitées."
@@ -524,24 +694,21 @@ function TermsSheet({ snap, onSnap, onTerm, onRun }) {
 }
 
 /** Feuille de capture : ce qui sera enregistre, avant de l'enregistrer. */
-function DraftSheet({ draft, onType, onConfirm, onClose }) {
+function DraftSheet({ draft, doc, onType, onWiden, onConfirm, onClose }) {
+  // « Mariama » est rarement ce qu'on veut : c'est « Mariama Diallo ». Le
+  // double-clic du bureau prenait l'entite ; l'appui long ne le peut plus, il
+  // appartient a la selection du systeme. La proposition remplace le geste.
+  const range = entityRangeAt(doc, draft.p, draft.anchor);
+  const entiere =
+    range && (range.from !== draft.from || range.to !== draft.to)
+      ? phraseAt(doc, range.p, range.from, range.to).trim()
+      : null;
+
   return (
     <Sheet
+      title="Nouvelle correspondance"
+      subtitle={`${draft.count} occurrence${draft.count > 1 ? "s" : ""} dans le document`}
       onClose={onClose}
-      header={
-        <>
-          <span className="flex-1 text-[15px] font-bold tracking-[-0.02em] text-strong">
-            Nouvelle correspondance
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="cursor-pointer font-mono text-[9.5px] font-semibold tracking-[0.16em] text-dim uppercase"
-          >
-            Annuler
-          </button>
-        </>
-      }
       footer={
         <button
           type="button"
@@ -552,25 +719,41 @@ function DraftSheet({ draft, onType, onConfirm, onClose }) {
         </button>
       }
     >
-      <div className="px-5 pb-3.5">
-        <div className="flex items-center gap-2.5">
-          <span
-            style={{ "--mark": typeRgb(draft.type) }}
-            className="term-dot size-[7px] flex-none rounded-full"
-          />
-          <span className="text-[17px] font-bold tracking-[-0.02em] break-words text-strong">
-            {draft.text}
-          </span>
-        </div>
-        <p className="mt-[7px] ml-4 font-mono text-[10.5px] text-faint">
-          {draft.count} occurrence{draft.count > 1 ? "s" : ""} ·{" "}
-          {familyLabel(draft.type)}
-        </p>
+      <div className="flex items-center gap-2.5 px-5 pt-4 pb-3.5">
+        <span
+          style={{ "--mark": typeRgb(draft.type) }}
+          className="term-dot size-[7px] flex-none rounded-full"
+        />
+        <span className="text-[19px] font-bold tracking-[-0.03em] break-words text-strong">
+          {draft.text}
+        </span>
       </div>
-      <p className="px-5 pb-2.5 font-mono text-[9.5px] tracking-[0.16em] text-faint uppercase">
+
+      {entiere && entiere !== draft.text && (
+        <button
+          type="button"
+          onClick={onWiden}
+          className="flex w-full cursor-pointer items-baseline gap-3 border-t px-5 py-3.5 text-left"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-semibold text-strong">
+              Prendre l’entité entière
+            </span>
+            <span className="mt-0.5 block text-[12px] text-faint">« {entiere} »</span>
+          </span>
+          <span className="text-accent-strong flex-none font-mono text-[10px]">
+            Étendre
+          </span>
+        </button>
+      )}
+
+      <p className="px-5 pt-3 pb-2.5 font-mono text-[9.5px] tracking-[0.16em] text-faint uppercase">
         Type de donnée
       </p>
       <TypeOptions value={draft.type} onChange={onType} />
+      <p className="px-5 pb-4 text-[12px] text-faint">
+        Famille {familyLabel(draft.type)}
+      </p>
     </Sheet>
   );
 }
@@ -583,21 +766,9 @@ function TermSheet({ term, editable, onClose }) {
 
   return (
     <Sheet
+      title="Correspondance"
+      subtitle={`${term.hits.length} occurrence${term.hits.length > 1 ? "s" : ""}${term.auto ? " · pré-détectée" : ""}`}
       onClose={onClose}
-      header={
-        <>
-          <span className="flex-1 text-[15px] font-bold tracking-[-0.02em] text-strong">
-            Correspondance
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="cursor-pointer font-mono text-[9.5px] font-semibold tracking-[0.16em] text-dim uppercase"
-          >
-            Terminé
-          </button>
-        </>
-      }
       footer={
         <button
           type="button"
@@ -611,20 +782,14 @@ function TermSheet({ term, editable, onClose }) {
         </button>
       }
     >
-      <div className="px-5 pb-3.5">
-        <div className="flex items-center gap-2.5">
-          <span
-            style={{ "--mark": typeRgb(term.type) }}
-            className="term-dot size-[7px] flex-none rounded-full"
-          />
-          <span className="text-[17px] font-bold tracking-[-0.02em] break-words text-strong">
-            {term.text}
-          </span>
-        </div>
-        <p className="mt-[7px] ml-4 font-mono text-[10.5px] text-faint">
-          {term.hits.length} occurrence{term.hits.length > 1 ? "s" : ""}
-          {term.auto ? " · pré-détectée" : ""}
-        </p>
+      <div className="flex items-center gap-2.5 px-5 pt-4 pb-3.5">
+        <span
+          style={{ "--mark": typeRgb(term.type) }}
+          className="term-dot size-[7px] flex-none rounded-full"
+        />
+        <span className="text-[19px] font-bold tracking-[-0.03em] break-words text-strong">
+          {term.text}
+        </span>
       </div>
 
       <p className="px-5 pb-2.5 font-mono text-[9.5px] tracking-[0.16em] text-faint uppercase">
@@ -639,7 +804,7 @@ function TermSheet({ term, editable, onClose }) {
       <p className="px-5 pb-1 font-mono text-[9.5px] tracking-[0.16em] text-faint uppercase">
         Pseudonyme
       </p>
-      <div className="px-5 pb-2">
+      <div className="px-5 pb-3">
         <Input
           value={term.pseudo}
           readOnly={!editable}
@@ -647,33 +812,6 @@ function TermSheet({ term, editable, onClose }) {
           aria-label={`Pseudonyme de ${term.text}`}
           className="h-11 w-full rounded-none border-0 border-b bg-transparent px-0 font-mono text-[13px] focus-visible:ring-0"
         />
-      </div>
-    </Sheet>
-  );
-}
-
-/** Recuperation des fichiers produits : le composant du bureau, en feuille. */
-function LivrablesSheet({ onClose }) {
-  return (
-    <Sheet
-      onClose={onClose}
-      header={
-        <>
-          <span className="flex-1 text-[15px] font-bold tracking-[-0.02em] text-strong">
-            Livrables prêts
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="cursor-pointer font-mono text-[9.5px] font-semibold tracking-[0.16em] text-dim uppercase"
-          >
-            Terminé
-          </button>
-        </>
-      }
-    >
-      <div className="px-5 pb-8">
-        <Deliverables />
       </div>
     </Sheet>
   );

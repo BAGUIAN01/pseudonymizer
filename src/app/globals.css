@@ -350,9 +350,29 @@
 }
 
 /* Feuille : la transition n'est posee qu'au repos, jamais pendant le geste,
-   sans quoi elle traine derriere le doigt. */
+   sans quoi elle traine derriere le doigt.
+
+   La feuille permanente anime sa hauteur et non une translation : translatee,
+   elle depasse l'ecran par le bas et son pied — donc l'action — reste hors de
+   vue tant qu'elle n'est pas tiree a fond. */
 .sheet-settled {
-  transition: transform 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+  transition:
+    transform 0.34s cubic-bezier(0.32, 0.72, 0, 1),
+    height 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Le terme qu'on vient de retrouver dans le texte, le temps de le voir. */
+@keyframes anonymizer-locate {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(var(--mark) / 0);
+  }
+  35% {
+    box-shadow: 0 0 0 5px rgb(var(--mark) / 0.45);
+  }
+}
+.term-locate {
+  animation: anonymizer-locate 1.1s ease-out 2;
 }
 
 /* Ecran pousse sur la pile. */
@@ -369,6 +389,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .term-locate,
   .sheet-settled,
   .screen-push {
     transition-duration: 0.01ms !important;

@@ -12,56 +12,53 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Feuille basse, glissante.
+ * Feuille basse.
  *
- * Deux usages, une seule mecanique :
+ * Deux mecaniques, selon l'usage :
  *
- * - `snaps` fourni : la feuille est permanente et s'arrete sur des paliers
- *   (apercu, moitie, plein). C'est le panneau des correspondances, qui doit
- *   rester atteignable sans masquer le document.
- * - `snaps` absent : la feuille prend la hauteur de son contenu et se ferme
- *   d'un glissement vers le bas. C'est le cas de toutes les feuilles
- *   contextuelles.
+ * - `snaps` fourni — la feuille est permanente et s'arrete sur des paliers.
+ *   Elle anime alors sa **hauteur** : translatee, elle depasserait l'ecran
+ *   par le bas et son pied, donc l'action, resterait hors de vue tant
+ *   qu'elle n'est pas tiree a fond.
+ * - `snaps` absent — la feuille prend la hauteur de son contenu, monte par
+ *   translation et se ferme d'un glissement vers le bas.
  *
  * La transition n'est posee qu'au repos : pendant le geste, elle ferait
  * trainer la feuille derriere le doigt.
  *
- * @param {number[]} [snaps] hauteurs visibles ; un nombre < 1 vaut une
- *   fraction de la hauteur disponible
+ * @param {number[]} [snaps] hauteurs visibles ; un nombre <= 1 vaut une
+ *   fraction de la hauteur disponible. Passer une constante de module : le
+ *   tableau entre dans les dependances des gestes.
  */
 export function Sheet({
   snaps,
   index = 0,
   onIndex,
+  title,
+  subtitle,
   onClose,
-  header,
   footer,
   children,
-  className,
 }) {
   const ref = useRef(null);
-  const [box, setBox] = useState(0); // hauteur du conteneur
-  const [height, setHeight] = useState(0); // hauteur de la feuille
-  const [offset, setOffset] = useState(null); // translation courante, en px
+  const drag = useRef(null);
+
+  const [box, setBox] = useState(0);
+  const [height, setHeight] = useState(0);
+  const [live, setLive] = useState(null); // hauteur ou translation pendant le geste
   const [dragging, setDragging] = useState(false);
+  const [entered, setEntered] = useState(false);
 
   const permanent = Array.isArray(snaps) && snaps.length > 0;
-
-  // Les paliers se calculent une fois la hauteur du conteneur connue. Ils
-  // sont memorises : ils entrent dans les dependances des gestes.
-  const steps = useMemo(
-    () => (permanent ? snaps.map((s) => (s <= 1 ? Math.round(box * s) : s)) : []),
-    [box, permanent, snaps],
-  );
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el?.parentElement) return;
 
-    function measure() {
+    const measure = () => {
       setBox(el.parentElement.clientHeight);
-      setHeight(permanent ? 0 : el.offsetHeight);
-    }
+      if (!permanent) setHeight(el.offsetHeight);
+    };
     measure();
 
     const observer = new ResizeObserver(measure);
@@ -70,51 +67,51 @@ export function Sheet({
     return () => observer.disconnect();
   }, [permanent]);
 
-  const full = permanent ? (steps.length ? Math.max(...steps) : 0) : height;
-  const visible = permanent ? (steps[index] ?? steps[0] ?? 0) : full;
+  // Les paliers ne se connaissent qu'une fois le conteneur mesure.
+  const steps = useMemo(
+    () => (permanent ? snaps.map((s) => (s <= 1 ? Math.round(box * s) : s)) : []),
+    [box, permanent, snaps],
+  );
 
-  // Position de repos : la feuille descend de ce qui doit rester cache.
-  const resting = Math.max(0, full - visible);
+  const visible = permanent ? (steps[index] ?? 0) : height;
+  const max = permanent ? Math.max(...steps, 0) : height;
+  const closed = permanent && visible <= 1 && live === null;
 
-  // A la premiere image, la feuille est entierement basse : sans cela elle
-  // apparaitrait deja en place, sans montee.
-  const [entered, setEntered] = useState(false);
+  // A la premiere image, une feuille contextuelle est encore basse : sans
+  // cela elle apparaitrait deja en place, sans montee.
   useEffect(() => {
-    if (!full) return;
+    if (permanent || !height) return;
     const id = requestAnimationFrame(() => setEntered(true));
     return () => cancelAnimationFrame(id);
-  }, [full]);
-
-  const translate = !entered ? full : (offset ?? resting);
-
-  const drag = useRef(null);
+  }, [height, permanent]);
 
   const onPointerDown = useCallback(
     (event) => {
       if (event.target.closest("button")) return;
-      drag.current = { y: event.clientY, from: resting };
+      drag.current = { y: event.clientY, from: permanent ? visible : 0 };
       setDragging(true);
-      setOffset(resting);
+      setLive(drag.current.from);
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [resting],
+    [permanent, visible],
   );
 
   const onPointerMove = useCallback(
     (event) => {
       const start = drag.current;
       if (!start) return;
+      const delta = event.clientY - start.y;
 
-      let next = start.from + (event.clientY - start.y);
-      // Caoutchouc en butee haute, et en butee basse quand la feuille ne se
-      // ferme pas : le geste garde une reponse sans franchir la limite.
-      const min = 0;
-      const max = permanent ? full - (steps[0] ?? 0) : full;
-      if (next < min) next = min + (next - min) * 0.25;
-      if (next > max && permanent) next = max + (next - max) * 0.25;
-      setOffset(next);
+      if (permanent) {
+        let next = start.from - delta;
+        if (next > max) next = max + (next - max) * 0.25; // caoutchouc en butee
+        if (next < 0) next = 0;
+        setLive(next);
+        return;
+      }
+      setLive(delta < 0 ? delta * 0.25 : delta);
     },
-    [full, permanent, steps],
+    [max, permanent],
   );
 
   const onPointerUp = useCallback(() => {
@@ -123,38 +120,39 @@ export function Sheet({
     setDragging(false);
     if (!start) return;
 
-    const current = full - (offset ?? resting);
-
+    const current = live ?? start.from;
     if (permanent) {
-      // On s'arrete au palier le plus proche de la hauteur atteinte.
       let best = 0;
       steps.forEach((step, i) => {
         if (Math.abs(step - current) < Math.abs(steps[best] - current)) best = i;
       });
-      setOffset(null);
+      setLive(null);
       if (best !== index) onIndex?.(best);
       return;
     }
+    if (current > height * 0.35) onClose?.();
+    setLive(null);
+  }, [height, index, live, onClose, onIndex, permanent, steps]);
 
-    if (current < full * 0.65) {
-      onClose?.();
-      return;
-    }
-    setOffset(null);
-  }, [full, index, offset, onClose, onIndex, permanent, resting, steps]);
+  const style = permanent
+    ? { height: (live ?? visible) + "px" }
+    : {
+        transform: `translateY(${!entered ? height : (live ?? 0)}px)`,
+        maxHeight: "84%",
+      };
 
   return (
     <div
       ref={ref}
-      style={{
-        transform: `translateY(${translate}px)`,
-        height: permanent && full ? `${full}px` : undefined,
-        maxHeight: permanent ? undefined : "84%",
-      }}
+      style={style}
+      aria-hidden={closed || undefined}
       className={cn(
-        "bg-sheet absolute inset-x-0 bottom-0 z-40 flex flex-col rounded-t-[20px] border-t",
+        "bg-sheet absolute inset-x-0 bottom-0 z-40 flex flex-col overflow-hidden rounded-t-[20px] border-t",
         !dragging && "sheet-settled",
-        className,
+        // Repliee, la feuille disparait vraiment : sans cela ses boutons
+        // restaient atteignables au clavier et annonces par les lecteurs
+        // d'ecran.
+        closed && "invisible",
       )}
     >
       <div
@@ -164,12 +162,23 @@ export function Sheet({
         onPointerCancel={onPointerUp}
         className="flex-none touch-none"
       >
-        <div className="flex justify-center pt-[9px] pb-[3px]">
-          <span className="h-1 w-[34px] rounded-full bg-tint/16" aria-hidden />
+        <div className="flex justify-center pt-2.5 pb-1">
+          <span className="h-[5px] w-10 rounded-full bg-tint/22" aria-hidden />
         </div>
-        {header && (
-          <div className="flex items-center gap-3 px-5 pt-1.5 pb-4">{header}</div>
-        )}
+
+        <div className="flex items-start gap-3 border-b px-5 pt-2 pb-3.5">
+          <span className="min-w-0 flex-1">
+            <span className="block text-[17px] font-bold tracking-[-0.025em] text-strong">
+              {title}
+            </span>
+            {subtitle && (
+              <span className="mt-[3px] block text-[12.5px] text-faint">
+                {subtitle}
+              </span>
+            )}
+          </span>
+          <CloseButton onClick={onClose} />
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -177,11 +186,42 @@ export function Sheet({
       </div>
 
       {footer && (
-        <div className="bg-sheet flex flex-none flex-col gap-0.5 border-t px-5 pt-3 pb-[30px]">
+        <div className="bg-sheet flex flex-none flex-col gap-1 border-t px-5 pt-3 pb-[30px]">
           {footer}
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Fermeture d'une feuille.
+ *
+ * Un disque marque, et une croix tracee : en libelle de neuf pixels, elle ne
+ * se voyait pas. La cible fait 46 px quand le disque en fait 36 — on ne
+ * dessine pas un bouton de la taille du doigt, on l'atteint.
+ */
+export function CloseButton({ onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Fermer"
+      className="relative flex size-9 flex-none cursor-pointer items-center justify-center rounded-full bg-tint/13 text-strong after:absolute after:-inset-[5px] after:content-['']"
+    >
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        aria-hidden
+      >
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
   );
 }
 
