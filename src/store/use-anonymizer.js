@@ -596,6 +596,9 @@ export const useAnonymizer = create((set, get) => ({
       // En de-pseudonymisation, ce sont les pseudonymes qui figurent dans le
       // document : c'est donc eux qu'on repere.
       hits: findOccurrences(doc, mode === "pseudo" ? row.text : row.pseudo),
+      // Le panneau l'annonce : une paire venue d'un registre n'a pas ete
+      // devinee, et son pseudonyme est celui d'un document deja produit.
+      fromRegistry: true,
     }));
     set({ terms, nextId: id, ...initialProcess });
 

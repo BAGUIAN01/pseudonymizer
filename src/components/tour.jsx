@@ -63,7 +63,7 @@ const ETAPES = [
     cible: "panneau",
     titre: "Vérifiez les correspondances",
     texte:
-      "Chaque terme apparaît ici avec son type et son pseudonyme, modifiables. Le champ de recherche ajoute un terme sans avoir à le retrouver dans le texte. Et « Importer des correspondances » charge un registre existant, même après avoir ouvert le document.",
+      "Le registre met chaque valeur en regard de son pseudonyme. Une ligne se déplie sur son type, son pseudonyme modifiable et son retrait. Le champ filtre le tableau, et ajoute un terme sans avoir à le retrouver dans le texte ; « Importer des correspondances » charge un registre existant, même après avoir ouvert le document.",
   },
   {
     cible: "traitement",

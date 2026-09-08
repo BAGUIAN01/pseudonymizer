@@ -91,6 +91,17 @@ se lit dans le panneau. Le vert citron reste réservé aux actions.
 Toute la zone de travail accepte le glisser-déposer, à n'importe quel moment du
 flux.
 
+Le registre est un tableau : la valeur et son pseudonyme se lisent en regard,
+dans des colonnes qui tiennent d'une ligne à l'autre, et le reste — type,
+pseudonyme modifiable, retrait — se déplie sous la ligne. Chaque terme portait
+auparavant son sélecteur et son champ en permanence, soit une centaine de
+pixels : à quarante termes, le panneau devenait un mur. Une ligne repliée en
+fait trente-six.
+
+Le dépli est une rangée de grille qui passe de `0fr` à `1fr` — la hauteur
+s'anime sans être mesurée. Replié, il porte `inert` : sans cela le sélecteur et
+le champ restaient atteignables au clavier sous une hauteur nulle.
+
 ## Au doigt
 
 Sous 768 px, l'application prend une autre disposition. La bascule est faite
@@ -109,7 +120,7 @@ n'ont pas d'équivalent tactile sont réécrites.
 | Sélection au curseur | Un appui prend le mot |
 | Double-clic sur un nom | Un appui long prend l'entité entière |
 | Barre ancrée à la sélection | Feuille basse, dans la zone du pouce |
-| Panneau latéral de 360 px | Feuille à trois paliers, par-dessus le document |
+| Panneau latéral de 400 px | Feuille à trois paliers, par-dessus le document |
 | Colonne de modes | Deux pastilles flottantes : les modes, puis le projet |
 
 Les barres flottantes sont en verre, et le contenu passe dessous. Leur conteneur

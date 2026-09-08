@@ -478,13 +478,16 @@ h1{
 .thead .r{text-align:right}
 
 .trow{border-bottom:1px solid var(--border)}
+.trow[data-open="1"]{background:rgb(var(--tint)/.03)}
 .tr{width:100%;text-align:left;padding:12px 20px;min-height:50px}
 .tr .val{display:flex;align-items:baseline;gap:8px;min-width:0}
 .tr .tx{min-width:0;font-size:13.5px;font-weight:600;color:var(--strong);overflow-wrap:anywhere;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-/* Le pseudonyme se lit sans ses crochets : la colonne le delimite deja. */
+/* Le pseudonyme se lit sans ses crochets : la colonne le delimite deja. Il
+   n'est pas non plus a la teinte d'accent — une colonne entiere de vert
+   citron la disputerait au seul bouton qui agit. */
 .tr .ps{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:500;
-  color:var(--accent-strong);white-space:nowrap;font-variant-numeric:tabular-nums}
+  color:var(--foreground);white-space:nowrap;font-variant-numeric:tabular-nums}
 .tr .oc{text-align:right}
 .tr .oc.none{color:var(--destructive)}
 .chev{align-self:center;display:flex;color:var(--faint);
