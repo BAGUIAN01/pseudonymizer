@@ -378,7 +378,10 @@ h1{
 .views button[aria-pressed="true"]{color:var(--strong);font-weight:700;
   text-decoration:underline;text-decoration-color:var(--accent-strong)}
 
-.doc{padding:18px 20px 132px}
+/* Le document est du texte, et il se selectionne comme tel : c'est la
+   selection du systeme, avec ses poignees, qui remplace le glissement au
+   curseur du bureau. Le reste de l'interface reste inselectionnable. */
+.doc{padding:18px 20px 132px;user-select:text;-webkit-user-select:text}
 .doc h2{font-size:17px;font-weight:700;letter-spacing:-.028em;color:var(--strong);margin:0 0 16px;text-wrap:balance}
 .doc p{font-size:14.5px;line-height:2.05;color:var(--foreground);margin:0 0 18px;text-wrap:pretty}
 .tok{white-space:pre-wrap}
@@ -423,14 +426,21 @@ h1{
 .sheet-head .t{display:block;font-size:17px;font-weight:700;letter-spacing:-.025em;color:var(--strong)}
 .sheet-head .s{display:block;margin-top:3px;font-size:12.5px;color:var(--faint)}
 .close{
-  position:relative;flex:none;width:31px;height:31px;border-radius:99px;
-  background:rgb(var(--tint)/.08);color:var(--dim);
-  font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;
+  position:relative;flex:none;width:36px;height:36px;border-radius:99px;
+  background:rgb(var(--tint)/.13);color:var(--strong);
+  display:flex;align-items:center;justify-content:center;
 }
 /* La cible fait 45 px, le disque en fait 31 : on ne dessine pas un bouton
    de la taille du doigt, on l'atteint. */
-.close::after{content:"";position:absolute;inset:-7px}
-.close:active{background:rgb(var(--tint)/.16)}
+.close::after{content:"";position:absolute;inset:-5px}
+.close:active{background:rgb(var(--tint)/.22)}
+
+/* Fermer le document : un bouton, pas une mention. */
+.closedoc{
+  display:flex;align-items:center;gap:5px;padding:7px 12px 7px 9px;border-radius:99px;
+  background:rgb(var(--tint)/.09);color:var(--strong);font-size:12.5px;font-weight:700;
+}
+.closedoc:active{background:rgb(var(--tint)/.16)}
 .sheet-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .sheet-body::-webkit-scrollbar{width:0}
 .sheet-foot{flex:none;padding:12px 20px 30px;border-top:1px solid var(--border);
@@ -925,14 +935,17 @@ function renderWork(){
      consigne. Il tient maintenant sur une ligne. */
   const head =
     '<header class="head"><div class="headrow">' +
-      '<button class="textbtn" data-act="back">Fermer</button>' +
+      '<button class="closedoc" data-act="back">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M15 5l-7 7 7 7"/></svg>Fermer</button>' +
       '<span class="filename">'+esc(S.picked.doc || DOCS[S.mode].file)+'</span>' +
       '<span class="lbl">'+(pseudo ? "01" : "02")+'</span>' +
     '</div></header>';
 
   /* La consigne s'efface des la premiere capture : elle enseigne une fois. */
   const hint = !done && S.hint && pseudo
-    ? '<p class="hint">Appuyez un mot · maintenez pour l’entité entière</p>'
+    ? '<p class="hint">Appuyez un mot, ou sélectionnez plusieurs mots</p>'
     : "";
 
   return '<div class="topbar glass">' + head + hint + '</div>' +
@@ -1031,7 +1044,9 @@ function locateTerm(id){
 
 function toast(msg){
   toastEl.textContent = msg;
-  toastEl.style.bottom = Math.max(DOCK.el ? DOCK.vis + 18 : 0, 96) + "px";
+  // Au-dessus de la feuille la plus haute, quelle qu'elle soit.
+  const dessous = MODAL.el ? MODAL.h : DOCK.el ? DOCK.vis : 0;
+  toastEl.style.bottom = Math.max(dessous + 18, 96) + "px";
   toastEl.classList.add("on");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove("on"), 2200);
@@ -1263,7 +1278,10 @@ function sheetHead(title, sub, act){
   return '<div class="sheet-head">' +
     '<span class="ttl"><span class="t">'+title+'</span>' +
     (sub ? '<span class="s">'+sub+'</span>' : "") + '</span>' +
-    '<button class="close" data-act="'+(act || "close-sheet")+'" aria-label="Fermer">×</button>' +
+    '<button class="close" data-act="'+(act || "close-sheet")+'" aria-label="Fermer">' +
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="2.4" stroke-linecap="round" aria-hidden="true">' +
+      '<path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
   '</div>';
 }
 
@@ -1316,6 +1334,24 @@ const typeOpts = (current, locked) => locked
       'style="--mark:'+FAMILIES[t.family].rgb+'">' +
       '<span class="dot" style="--mark:'+FAMILIES[t.family].rgb+'"></span>'+t.label+'</button>').join("") + '</div>';
 
+/**
+ * « Mariama » est rarement ce qu'on veut : c'est « Mariama Diallo ».
+ *
+ * Le double-clic du bureau prenait l'entite entiere ; l'appui long ne peut
+ * plus le faire, il appartient a la selection du systeme. La proposition
+ * remplace le geste, et ne s'affiche que si elle a un sens.
+ */
+function entitySuggestion(d){
+  const r = entityAt(d.p, d.anchor);
+  if(!r || (r.from === d.from && r.to === d.to)) return "";
+  const whole = phraseAt(d.p, r.from, r.to).trim();
+  if(whole === d.text) return "";
+  return '<button class="row pad20" data-act="widen" style="border-top:1px solid var(--border)">' +
+    '<span class="grow"><span class="t">Prendre l’entité entière</span>' +
+    '<span class="d">« '+esc(whole)+' »</span></span>' +
+    '<span class="v accent">Étendre</span></button>';
+}
+
 function renderModal(id, props){
   if(id === "draft"){
     const d = S.draft; if(!d) return "";
@@ -1330,6 +1366,7 @@ function renderModal(id, props){
           '<span style="font-size:19px;font-weight:700;letter-spacing:-.03em;color:var(--strong)">'+esc(d.text)+'</span>' +
         '</div>' +
       '</div>' +
+      entitySuggestion(d) +
       '<p class="lbl pad20" style="display:block;padding-bottom:10px">Type de donnée</p>' +
       typeOpts(d.type) +
       '<div class="sheet-foot">' +
@@ -1425,10 +1462,11 @@ function refreshModal(props){
 /* =========================================================================
    Actions
    ========================================================================= */
-function setDraft(p, from, to){
+function setDraft(p, from, to, anchor){
   const text = phraseAt(p, from, to).trim();
   if(!text) return;
-  S.draft = {p, from, to, text, type:guessType(text), count:occurrences(text).length};
+  S.draft = {p, from, to, text, anchor: anchor ?? from,
+             type:guessType(text), count:occurrences(text).length};
   if(S.hint){ S.hint = false; paint(); }
   repaintDoc();
   openModal("draft");
@@ -1532,6 +1570,15 @@ phone.addEventListener("click", (e) => {
     }else{ S.draft = null; closeModal(); repaintDoc(); }
     return;
   }
+  if(act === "widen"){
+    const d = S.draft;
+    if(d){
+      const r = entityAt(d.p, d.anchor);
+      setDraft(d.p, r.from, r.to, d.anchor);
+      refreshModal(); repaintDoc(); tick(8);
+    }
+    return;
+  }
   if(act === "cancel-draft" || act === "close-sheet"){ closeModal(); return; }
   if(act === "remove"){
     const id = Number(el.dataset.id);
@@ -1582,6 +1629,59 @@ phone.addEventListener("keydown", (e) => {
 
 /* --- Gestes sur le document ---------------------------------------------- */
 let press = null;
+/* Ouvrir le brouillon efface la selection, ce qui declenche a son tour un
+   evenement de selection : on l'ignore, faute de quoi les deux se relancent. */
+let ignoreSelection = false;
+let selTimer = null;
+
+/** Remonte d'un noeud du document au jeton qui le porte. */
+function tokenElement(node){
+  const el = node && node.nodeType === 3 ? node.parentElement : node;
+  return el && el.closest ? el.closest("[data-i]") : null;
+}
+
+/**
+ * Ramene la selection du systeme a une plage de jetons.
+ *
+ * C'est ce qui rend « 12 rue Carnot, Dakar » capturable : ni un mot seul, ni
+ * une entite capitalisee. Une selection qui deborde sur plusieurs paragraphes
+ * est ramenee au premier — ce qui est capture est ce qui s'affiche.
+ */
+function readSelection(){
+  if(!creatable()) return false;
+  const sel = window.getSelection();
+  if(!sel || sel.isCollapsed || !sel.rangeCount) return false;
+
+  const range = sel.getRangeAt(0);
+  const body = document.getElementById("docBody");
+  if(!body || !body.contains(range.commonAncestorContainer)) return false;
+
+  const startEl = tokenElement(range.startContainer);
+  if(!startEl) return false;
+  const p = Number(startEl.dataset.p);
+  const toks = T()[p];
+  if(!toks) return false;
+
+  const endEl = tokenElement(range.endContainer);
+  let from = Number(startEl.dataset.i);
+  let to = endEl && Number(endEl.dataset.p) === p
+    ? Number(endEl.dataset.i)
+    : toks.length - 1;
+  if(to < from){ const k = from; from = to; to = k; }
+
+  // On se recale sur des mots : commencer sur une espace collerait de la
+  // ponctuation au terme.
+  while(from <= to && !toks[from].word) from += 1;
+  while(to >= from && !toks[to].word) to -= 1;
+  if(to < from) return false;
+
+  ignoreSelection = true;
+  sel.removeAllRanges();
+  setDraft(p, from, to);
+  setTimeout(() => { ignoreSelection = false; }, 60);
+  return true;
+}
+
 function viewing(){ return S.status === "running" || (S.status === "done" && S.view === "result"); }
 /* En restauration, les paires viennent du registre : rien à sélectionner.
    Dans l'aperçu non plus — mais un pseudonyme y reste interrogeable. */
@@ -1593,16 +1693,6 @@ phone.addEventListener("pointerdown", (e) => {
   const el = e.target.closest("[data-i]");
   if(!el) return;
   press = {x:e.clientX, y:e.clientY, el, fired:false, timer:null};
-  if(!el.dataset.term && creatable()){
-    const p = Number(el.dataset.p), i = Number(el.dataset.i);
-    if(T()[p] && T()[p][i] && T()[p][i].word){
-      press.timer = setTimeout(() => {
-        press.fired = true;
-        const r = entityAt(p, i);
-        setDraft(p, r.from, r.to);
-      }, 420);
-    }
-  }
 });
 phone.addEventListener("pointermove", (e) => {
   if(!press) return;
@@ -1613,12 +1703,23 @@ phone.addEventListener("pointermove", (e) => {
 phone.addEventListener("pointerup", () => {
   if(!press) return;
   clearTimeout(press.timer);
-  const {el, fired} = press; press = null;
-  if(fired) return;
+  const {el} = press; press = null;
+
+  // Une selection etendue prime sur l'appui : c'est elle que l'on capture.
+  if(readSelection()) return;
+
   if(el.dataset.term){ openModal("term", {id:Number(el.dataset.term)}); return; }
   if(!creatable()) return;
   const p = Number(el.dataset.p), i = Number(el.dataset.i);
-  if(T()[p] && T()[p][i] && T()[p][i].word) setDraft(p, i, i);
+  if(T()[p] && T()[p][i] && T()[p][i].word) setDraft(p, i, i, i);
+});
+
+/* Les poignees de selection se relachent souvent hors du document : seul
+   l'evenement de selection le dit. */
+document.addEventListener("selectionchange", () => {
+  if(ignoreSelection || S.draft) return;
+  clearTimeout(selTimer);
+  selTimer = setTimeout(readSelection, 220);
 });
 phone.addEventListener("pointercancel", () => { if(press){ clearTimeout(press.timer); press = null; } });
 scrim.addEventListener("click", () => { if(MODAL.el) closeModal(); else if(DOCK.el) setDockVisible(0); });
