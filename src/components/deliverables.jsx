@@ -39,6 +39,22 @@ export function Deliverables() {
     Boolean,
   );
 
+  /**
+   * Les noms produits.
+   *
+   * Ils ne se devinent pas : le natif ecrit a cote du document source et, si
+   * le fichier precedent est ouvert dans Word ou Excel — donc verrouille — il
+   * en numerote un autre. Annoncer « 2 fichiers » sans les nommer laissait
+   * alors chercher un fichier qui n'existe pas sous ce nom.
+   */
+  const base = (fileName ?? "document").replace(/\.[^.]+$/, "");
+  const noms = written.length
+    ? written.map((p) => p.split(/[\\/]/).pop())
+    : [
+        base + (pseudo ? "_pseudonymise.txt" : "_restaure.txt"),
+        ...(pseudo ? ["Registre_correspondances.xlsx"] : []),
+      ];
+
   async function download() {
     if (busy) return;
     setBusy(true);
@@ -58,7 +74,6 @@ export function Deliverables() {
 
       // Hors Tauri, rien n'a ete ecrit sur le disque : le resultat est
       // reconstruit ici, a partir du texte calcule cote client.
-      const base = (fileName ?? "document").replace(/\.[^.]+$/, "");
       const name = base + (pseudo ? "_pseudonymise.txt" : "_restaure.txt");
       const body = `${title ?? base}\n\n${resultParagraphs().join("\n\n")}`;
       // Le BOM garantit l'ouverture correcte des accents sous Windows.
@@ -97,6 +112,18 @@ export function Deliverables() {
           {count === 2 ? "2 fichiers" : "1 fichier"}
         </span>
       </div>
+
+      <ul className="flex flex-col gap-0.5">
+        {noms.map((nom) => (
+          <li
+            key={nom}
+            title={nom}
+            className="text-muted-foreground truncate font-mono text-[10px]"
+          >
+            {nom}
+          </li>
+        ))}
+      </ul>
 
       <button
         type="button"

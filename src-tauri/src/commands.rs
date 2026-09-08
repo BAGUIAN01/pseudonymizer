@@ -48,6 +48,94 @@ fn output_path(source: &Path, suffix: &str) -> Result<PathBuf, String> {
   Ok(parent.join(format!("{stem}{suffix}.{extension}")))
 }
 
+/// Un chemin encore libre, numerote si le fichier existe deja.
+///
+/// Traiter deux fois le meme document ne doit pas detruire le resultat
+/// precedent — c'est deja la regle du telechargement. Sous Windows, c'est en
+/// plus la seule facon d'aboutir : le fichier produit reste verrouille tant
+/// qu'il est ouvert dans Word, un lecteur PDF ou Excel, et l'ecraser echoue
+/// net (« le processus ne peut pas acceder au fichier », os error 32).
+fn chemin_libre(target: PathBuf) -> PathBuf {
+  if !target.exists() {
+    return target;
+  }
+
+  let parent = target.parent().unwrap_or_else(|| Path::new(".")).to_path_buf();
+  let stem = target
+    .file_stem()
+    .and_then(|s| s.to_str())
+    .unwrap_or("fichier")
+    .to_string();
+  let extension = target
+    .extension()
+    .and_then(|s| s.to_str())
+    .unwrap_or_default()
+    .to_string();
+
+  for n in 2.. {
+    let candidat = parent.join(if extension.is_empty() {
+      format!("{stem} ({n})")
+    } else {
+      format!("{stem} ({n}).{extension}")
+    });
+    if !candidat.exists() {
+      return candidat;
+    }
+  }
+  target
+}
+
+/// Le fichier est-il tenu par quelqu'un d'autre ?
+///
+/// 32 : ERROR_SHARING_VIOLATION, ce que pose Word, Excel ou un lecteur PDF sur
+/// un fichier ouvert. 33 : ERROR_LOCK_VIOLATION, qu'un antivirus ou une
+/// synchronisation cloud peut poser le temps d'un scan.
+fn verrouille(e: &std::io::Error) -> bool {
+  matches!(e.raw_os_error(), Some(32) | Some(33))
+}
+
+/// Traduit l'echec d'une ecriture en quelque chose d'actionnable.
+///
+/// « os error 32 » ne dit pas quoi faire.
+fn erreur_ecriture(target: &Path, e: &std::io::Error) -> String {
+  let nom = target
+    .file_name()
+    .and_then(|s| s.to_str())
+    .unwrap_or("Le fichier")
+    .to_string();
+  if verrouille(e) {
+    return format!(
+      "« {nom} » est ouvert dans une autre application. Fermez-le, puis relancez le traitement."
+    );
+  }
+  format!("Ecriture impossible : {e}")
+}
+
+/// Ecrit un livrable, en contournant un fichier verrouille plutot qu'en
+/// echouant.
+///
+/// Ecraser son propre resultat precedent est ce qu'on attend quand on ajuste
+/// une correspondance et qu'on relance : numeroter a chaque essai laisserait
+/// une trainee de fichiers. Mais sous Windows le fichier produit est verrouille
+/// des qu'il est ouvert dans Word, Excel ou un lecteur PDF, et l'ecrasement
+/// echoue net — tout le traitement etait alors perdu pour un classeur reste
+/// ouvert dans un coin. On ecrit donc a cote, sous un nom numerote, et
+/// l'interface annonce le nom retenu : le travail aboutit.
+///
+/// Ce repli ne peut pas se verifier ici : Linux ne pose pas de verrou
+/// obligatoire, une ecriture par-dessus un fichier ouvert y reussit.
+fn ecrire(target: PathBuf, bytes: &[u8]) -> Result<PathBuf, String> {
+  match std::fs::write(&target, bytes) {
+    Ok(()) => Ok(target),
+    Err(e) if verrouille(&e) => {
+      let libre = chemin_libre(target);
+      std::fs::write(&libre, bytes).map_err(|err| erreur_ecriture(&libre, &err))?;
+      Ok(libre)
+    }
+    Err(e) => Err(erreur_ecriture(&target, &e)),
+  }
+}
+
 /// Applique les substitutions et reecrit le document dans son format d'origine.
 ///
 /// Les expressions les plus longues sont traitees en premier : sans cela,
@@ -87,7 +175,7 @@ pub async fn apply_pseudonymisation(
   let rewritten = rewrite::rewrite(&extension, &bytes, &replacements)?;
 
   let target = output_path(&source, if reverse { "_restaure" } else { "_pseudonymise" })?;
-  std::fs::write(&target, rewritten).map_err(|e| format!("Ecriture impossible : {e}"))?;
+  let target = ecrire(target, &rewritten)?;
 
   Ok(Deliverables {
     document_path: target.to_string_lossy().into_owned(),
@@ -118,8 +206,7 @@ pub async fn write_beside(
     .parent()
     .ok_or_else(|| "Dossier de destination introuvable".to_string())?;
 
-  let target = parent.join(&file_name);
-  std::fs::write(&target, contents).map_err(|e| format!("Ecriture impossible : {e}"))?;
+  let target = ecrire(parent.join(&file_name), &contents)?;
   Ok(target.to_string_lossy().into_owned())
 }
 
@@ -146,7 +233,7 @@ pub async fn copy_to_dir(paths: Vec<String>, dir: String) -> Result<Vec<String>,
       .file_name()
       .ok_or_else(|| format!("Nom de fichier illisible : {path}"))?;
 
-    let mut target = destination.join(name);
+    let target = destination.join(name);
 
     // Le fichier produit se trouve deja a cote du document source. Choisir ce
     // meme dossier pour le telechargement ne doit pas en fabriquer une copie
@@ -160,22 +247,7 @@ pub async fn copy_to_dir(paths: Vec<String>, dir: String) -> Result<Vec<String>,
       continue;
     }
 
-    if target.exists() {
-      let stem = source.file_stem().and_then(|s| s.to_str()).unwrap_or("fichier");
-      let extension = source.extension().and_then(|s| s.to_str()).unwrap_or("");
-      for n in 2.. {
-        let candidate = destination.join(if extension.is_empty() {
-          format!("{stem} ({n})")
-        } else {
-          format!("{stem} ({n}).{extension}")
-        });
-        if !candidate.exists() {
-          target = candidate;
-          break;
-        }
-      }
-    }
-
+    let target = chemin_libre(target);
     std::fs::copy(&source, &target).map_err(|e| format!("Copie impossible : {e}"))?;
     written.push(target.to_string_lossy().into_owned());
   }
@@ -267,6 +339,75 @@ mod tests {
     assert_eq!(contenu, "Signe par [PERSONNE_0001].");
 
     std::fs::remove_dir_all(&dir).ok();
+  }
+
+  /// Relancer apres avoir ajuste une correspondance remplace le resultat :
+  /// un fichier par essai ferait une trainee dans le dossier de l'utilisateur.
+  #[test]
+  fn relancer_remplace_le_resultat_precedent() {
+    let dir = std::env::temp_dir().join("anonymizer_test_relance");
+    std::fs::remove_dir_all(&dir).ok();
+    std::fs::create_dir_all(&dir).unwrap();
+    let source = dir.join("convention.txt");
+    std::fs::write(&source, "Signe par Jean Dupont.").unwrap();
+
+    let un = tauri::async_runtime::block_on(apply_pseudonymisation(
+      source.to_string_lossy().into_owned(),
+      vec![terme()],
+      false,
+    ))
+    .unwrap();
+    let deux = tauri::async_runtime::block_on(apply_pseudonymisation(
+      source.to_string_lossy().into_owned(),
+      vec![terme()],
+      false,
+    ))
+    .unwrap();
+
+    assert_eq!(un.document_path, deux.document_path);
+    assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 2, "un seul produit");
+
+    std::fs::remove_dir_all(&dir).ok();
+  }
+
+  /// Le repli quand le fichier est verrouille : le verrou lui-meme n'existe
+  /// pas sous Linux, mais le choix du nom, lui, se verifie partout.
+  #[test]
+  fn choisit_un_nom_libre_a_cote_du_fichier_pris() {
+    let dir = std::env::temp_dir().join("anonymizer_test_libre");
+    std::fs::remove_dir_all(&dir).ok();
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let pris = dir.join("rapport_pseudonymise.docx");
+    assert_eq!(chemin_libre(pris.clone()), pris, "libre, donc inchange");
+
+    std::fs::write(&pris, b"x").unwrap();
+    let second = chemin_libre(pris.clone());
+    assert_eq!(second.file_name().unwrap(), "rapport_pseudonymise (2).docx");
+
+    std::fs::write(&second, b"x").unwrap();
+    assert_eq!(
+      chemin_libre(pris).file_name().unwrap(),
+      "rapport_pseudonymise (3).docx"
+    );
+
+    std::fs::remove_dir_all(&dir).ok();
+  }
+
+  /// « os error 32 » ne dit pas quoi faire ; le message, lui, doit le dire.
+  #[test]
+  fn nomme_l_application_qui_tient_le_fichier() {
+    let verrou = std::io::Error::from_raw_os_error(32);
+    let message = erreur_ecriture(Path::new("C:/dossier/rapport.docx"), &verrou);
+    assert!(message.contains("rapport.docx"), "{message}");
+    assert!(message.contains("ouvert dans une autre application"), "{message}");
+
+    // Les autres echecs gardent leur cause en clair.
+    let autre = std::io::Error::from_raw_os_error(13);
+    assert!(
+      erreur_ecriture(Path::new("/tmp/x.txt"), &autre).starts_with("Ecriture impossible"),
+      "message inattendu"
+    );
   }
 
   #[test]

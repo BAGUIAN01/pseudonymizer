@@ -150,24 +150,31 @@ pour cela.
 
 ## État d'avancement
 
-L'interface est complète et fonctionnelle. Le backend Rust est déclaré mais pas
-encore implémenté : `src-tauri/src/commands.rs` fige les signatures et les types
-échangés, chaque commande renvoyant pour l'instant une erreur.
-
-La lecture des documents et des registres est faite, en JavaScript. Restent à
-écrire, en Rust :
-
-1. **`apply_pseudonymisation`** — réécriture du document dans son format
-   d'origine. Pour le PDF, stratégie retenue : rédaction en place (effacer la
-   zone du terme, redessiner le pseudonyme dans la même police, en réduisant le
-   corps si le pseudonyme est plus large). Attention aux polices partiellement
-   embarquées : les glyphes `[`, `]` et `_` peuvent manquer.
-2. **`reveal_in_folder`** — ouverture de l'explorateur sur le fichier produit.
+L'interface et le backend natif sont en place. La réécriture couvre `.docx` et
+`.xlsx` (OOXML), `.txt`, `.md`, `.csv` et `.pdf` ; tout autre format est refusé
+plutôt que rendu de travers.
 
 Le registre est lu et écrit par SheetJS, avec des en-têtes reconnus à la
 tolérance près (casse, accents, libellés voisins) et un repli sur l'ordre des
 colonnes. Un fichier d'exemple du dossier `Registres` reste nécessaire pour
 confirmer l'interopérabilité avec le logiciel existant.
+
+### Écrire à côté du document
+
+Les livrables s'écrivent dans le dossier du document source. Relancer après
+avoir ajusté une correspondance remplace le résultat précédent : numéroter à
+chaque essai laisserait une traînée de fichiers.
+
+Sauf si ce fichier est verrouillé. Sous Windows, Word, Excel et les lecteurs
+PDF tiennent un verrou exclusif sur ce qu'ils ont ouvert : écraser échoue avec
+« le processus ne peut pas accéder au fichier » (os error 32), et tout le
+traitement était perdu pour un classeur resté ouvert dans un coin. Le livrable
+part alors sous un nom numéroté, et l'interface annonce le nom retenu — le
+travail aboutit. Ce repli ne se vérifie pas en test : Linux ne pose pas de
+verrou obligatoire, une écriture par-dessus un fichier ouvert y réussit.
+
+Le téléchargement, lui, ne remplace jamais rien : le dossier de destination est
+choisi par l'utilisateur et peut contenir un homonyme qui ne vient pas d'ici.
 
 ### Bordures d'une occurrence
 
