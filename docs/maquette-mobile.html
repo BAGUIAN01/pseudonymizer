@@ -90,20 +90,20 @@ h1{
 }
 .rail{display:flex;flex-direction:column}
 .rail button{
-  display:grid;grid-template-columns:26px 1fr;gap:12px;align-items:baseline;
-  width:100%;text-align:left;cursor:pointer;
+  display:block;width:100%;text-align:left;cursor:pointer;
   background:none;border:0;border-top:1px solid var(--page-line-soft);
-  padding:11px 6px;color:var(--page-ink);font:inherit;font-size:13.5px;font-weight:600;
+  padding:10px 6px;color:var(--page-ink);font:inherit;font-size:13.5px;font-weight:600;
   transition:background-color .15s;border-radius:8px;
 }
 .rail button:last-child{border-bottom:1px solid var(--page-line-soft)}
 .rail button:hover{background:var(--page-line-soft)}
 .rail button[aria-current="true"]{color:var(--page-accent-ink)}
-.rail button[aria-current="true"] .idx{color:var(--page-accent-ink)}
-.rail .idx{
+.rail-group{
   font-family:"JetBrains Mono",ui-monospace,monospace;
-  font-size:10px;color:var(--page-faint);letter-spacing:.06em;
+  font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--page-accent-ink);margin:18px 0 4px;padding:0 6px;
 }
+.rail-group:first-child{margin-top:0}
 .rail .sub{display:block;font-weight:400;font-size:11.5px;color:var(--page-faint);margin-top:2px}
 .rail button:focus-visible,.tgl:focus-visible,.gest:focus-visible{outline:2px solid var(--page-accent);outline-offset:2px}
 
@@ -234,19 +234,25 @@ h1{
 
 .body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .body.pad{padding:4px 20px 28px}
+.body.tabroot{padding-bottom:126px}
 .body::-webkit-scrollbar{width:0}
 
-.tabbar{
-  flex:none;display:grid;grid-template-columns:repeat(3,1fr);
-  border-top:1px solid var(--border);background:var(--panel);
-  padding-bottom:22px;position:relative;z-index:20;
+/* Sélecteur de mode : au bureau, le seul élément de la colonne à porter une
+   ombre, volontairement détaché du reste. Ici il descend dans la zone du
+   pouce et garde son ombre — c'est le même objet, déplacé. */
+.navpill{
+  position:absolute;left:20px;right:20px;bottom:26px;z-index:30;
+  display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:6px;
+  border-radius:24px;background:var(--surface);border:1px solid var(--border);
+  box-shadow:var(--shadow-panel);
 }
-.tabbar button{
-  display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 0 4px;
-  color:var(--faint);font-size:10px;font-weight:600;
+.navpill button{
+  display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+  padding:11px 14px;border-radius:18px;color:var(--dim);text-align:left;
 }
-.tabbar button[aria-selected="true"]{color:var(--accent-strong)}
-.tabbar button:active{transform:none}
+.navpill button[aria-selected="true"]{background:var(--primary);color:var(--primary-fg)}
+.navpill .i{font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:600;opacity:.75}
+.navpill .t{font-size:13px;font-weight:700;letter-spacing:-.015em;white-space:nowrap}
 .homebar{
   position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
   width:134px;height:5px;border-radius:99px;background:var(--strong);opacity:.28;z-index:70;pointer-events:none;
@@ -283,7 +289,7 @@ h1{
 .row + .row{border-top:1px solid var(--border)}
 .row:active{background:rgb(var(--tint)/.05)}
 .row .grow{flex:1;min-width:0}
-.row .t{display:block;font-size:13.5px;font-weight:600;color:var(--strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .t{display:block;font-size:13.5px;font-weight:600;color:var(--strong);overflow-wrap:anywhere}
 .row .d{display:block;font-size:11.5px;color:var(--faint);margin-top:2px}
 .chevron{color:var(--faint);flex:none}
 .fmt{
@@ -434,15 +440,13 @@ h1{
       <h1>Pseudonymizer, au doigt</h1>
       <p class="lede">
         Le logiciel de bureau tient en trois colonnes fixes et une fenêtre de 1180 px minimum.
-        Voici le même flux redessiné pour un écran de 390 px et un pouce : pile de navigation,
-        feuilles à paliers, sélection tactile. Prototype réel — tout ce qui est ci-contre répond.
+        Voici le même flux redessiné pour un écran de 390 px et un pouce. Les deux modes
+        deviennent une barre flottante en bas ; le reste suit — pile de navigation, feuilles à
+        paliers, sélection tactile. Prototype réel : tout ce qui est ci-contre répond.
       </p>
     </div>
 
-    <div>
-      <p class="rail-label">Le flux</p>
-      <div class="rail" id="rail"></div>
-    </div>
+    <div class="rail" id="rail"></div>
 
     <div>
       <p class="rail-label">Thème de l'application</p>
@@ -459,7 +463,8 @@ h1{
         <div class="shift"><b>Double-clic sur un nom</b><span>Appui long : l'entité entière, « Mariama Diallo » d'un geste</span></div>
         <div class="shift"><b>Barre flottante de sélection</b><span>Feuille basse, dans la zone du pouce</span></div>
         <div class="shift"><b>Panneau latéral de 360 px</b><span>Feuille à trois paliers par-dessus le document</span></div>
-        <div class="shift"><b>Colonne de modes et survols</b><span>Barre d'onglets, cibles de 44 px, états d'appui</span></div>
+        <div class="shift"><b>Colonne de modes</b><span>Barre flottante à deux onglets : même ombre, même détachement</span></div>
+        <div class="shift"><b>Survols et infobulles</b><span>États d'appui, cibles de 44 px, feuilles au lieu d'infobulles</span></div>
       </div>
     </div>
   </div>
@@ -532,7 +537,24 @@ const PARAS = [
   "Le montant global de la convention est fixé à 48 500 000 FCFA, versé en trois tranches. La coordination opérationnelle est confiée à Awa Sarr.",
 ];
 const DOC_TITLE = "Convention de partenariat — Exercice 1";
-const DOC_FILE  = "Exercice 1.pdf";
+
+/* Le même exercice une fois pseudonymisé : c'est ce document que l'onglet 02
+   attend en entrée, aux côtés du registre. */
+const PARAS_PSEUDO = [
+  "Entre [ENTREPRISE_0001], représentée par sa directrice [PERSONNE_0001], dont le siège est situé 12 rue Carnot, Dakar — NINEA 004512789.",
+  "Et le programme [PROGRAMME_0001], dont le point de contact est [PERSONNE_0002] ([EMAIL_0001], +221 77 812 44 09).",
+  "Le montant global de la convention est fixé à 48 500 000 FCFA, versé en trois tranches. La coordination opérationnelle est confiée à [PERSONNE_0003].",
+];
+
+/* Registre de correspondances : ce que l'onglet 02 charge pour restaurer. */
+const REGISTRY = [
+  ["SahelTech Industries","ENTREPRISE","[ENTREPRISE_0001]"],
+  ["Mariama Diallo","PERSONNE","[PERSONNE_0001]"],
+  ["Baobab Numérique","PROGRAMME","[PROGRAMME_0001]"],
+  ["Ousmane Fall","PERSONNE","[PERSONNE_0002]"],
+  ["o.fall@baobab-num.sn","EMAIL","[EMAIL_0001]"],
+  ["Awa Sarr","PERSONNE","[PERSONNE_0003]"],
+];
 
 /* Pré-détection par expressions régulières, comme runAutoDetect() au bureau. */
 const AUTO = [
@@ -549,25 +571,35 @@ const plural = (n,w) => n + " " + w + (n>1 ? "s" : "");
 function tokenize(text){
   const re = /[\p{L}\p{N}][\p{L}\p{N}'’.@_+-]*/gu;
   const out = []; let last = 0, m;
+  const gap = (str) => { for(const c of str) out.push({text:c, word:false}); };
   while((m = re.exec(text))){
     let word = m[0], tail = "";
     while(word.length > 1 && /[.\-_+]$/.test(word)){ tail = word.slice(-1)+tail; word = word.slice(0,-1); }
-    if(m.index > last) out.push({text:text.slice(last,m.index), word:false});
+    if(m.index > last) gap(text.slice(last, m.index));
     out.push({text:word, word:true});
-    if(tail) out.push({text:tail, word:false});
+    if(tail) gap(tail);
     last = m.index + m[0].length;
   }
-  if(last < text.length) out.push({text:text.slice(last), word:false});
+  if(last < text.length) gap(text.slice(last));
   return out;
 }
 const DOCTOK = PARAS.map(tokenize);
+const DOCTOK_PSEUDO = PARAS_PSEUDO.map(tokenize);
+
+/* Chaque onglet travaille sur son propre document. */
+const DOCS = {
+  pseudo:   {paras:PARAS,        toks:DOCTOK,        file:"Exercice 1.pdf"},
+  depseudo: {paras:PARAS_PSEUDO, toks:DOCTOK_PSEUDO, file:"Exercice 1_pseudonymise.pdf"},
+};
+const P = () => DOCS[S.mode].paras;
+const T = () => DOCS[S.mode].toks;
 
 /** Toutes les occurrences d'un texte, ramenées à des plages de tokens. */
 function occurrences(text){
   const hits = [];
   if(!text) return hits;
-  DOCTOK.forEach((toks,p)=>{
-    let idx = PARAS[p].indexOf(text);
+  T().forEach((toks,p)=>{
+    let idx = P()[p].indexOf(text);
     while(idx !== -1){
       const end = idx + text.length;
       let from = -1, to = -1, off = 0;
@@ -578,16 +610,16 @@ function occurrences(text){
         off = stop;
       });
       if(from !== -1) hits.push({p, from, to});
-      idx = PARAS[p].indexOf(text, end);
+      idx = P()[p].indexOf(text, end);
     }
   });
   return hits;
 }
-const phraseAt = (p,from,to) => DOCTOK[p].slice(from,to+1).map(t=>t.text).join("");
+const phraseAt = (p,from,to) => T()[p].slice(from,to+1).map(t=>t.text).join("");
 
 /** Appui long : le mot est étendu à l'entité qui l'entoure. */
 function entityAt(p,i){
-  const toks = DOCTOK[p];
+  const toks = T()[p];
   const isCap = k => toks[k] && toks[k].word && /^[\p{Lu}]/u.test(toks[k].text);
   const isGap = k => toks[k] && !toks[k].word && /^[  '’-]+$/.test(toks[k].text);
   let from = i, to = i;
@@ -615,8 +647,8 @@ function guessType(text){
    État
    ========================================================================= */
 const S = {
-  stack: ["home"],
-  tab: "home",
+  stack: ["pseudo"],
+  tab: "pseudo",
   mode: "pseudo",
   picked: {doc:null, registry:null},
   terms: [],
@@ -630,11 +662,20 @@ const S = {
 
 function makeTerm(text, type, auto){
   const index = S.terms.filter(t => t.type === type).length + 1;
+  const pseudo = "[" + type + "_" + String(index).padStart(4,"0") + "]";
+  // En restauration, c'est le pseudonyme qui figure dans le document.
   return {
-    id: S.nextId++, text, type, auto: !!auto,
-    pseudo: "[" + type + "_" + String(index).padStart(4,"0") + "]",
-    hits: occurrences(text),
+    id: S.nextId++, text, type, auto: !!auto, pseudo,
+    hits: occurrences(S.mode === "pseudo" ? text : pseudo),
   };
+}
+
+/* Chargement du registre : les paires existent déjà, rien à sélectionner. */
+function loadRegistry(){
+  S.terms = []; S.nextId = 1;
+  REGISTRY.forEach(([text,type,pseudo]) => S.terms.push({
+    id:S.nextId++, text, type, pseudo, fromRegistry:true, hits:occurrences(pseudo),
+  }));
 }
 function seedAuto(){
   S.terms = []; S.nextId = 1;
@@ -679,11 +720,12 @@ const ICON = {
 /* =========================================================================
    Écrans
    ========================================================================= */
-const TABBAR = () => '<nav class="tabbar">' + [
-  ["home","Accueil",ICON.home],["projects","Projets",ICON.folder],["settings","Réglages",ICON.gear],
-].map(([id,label,icon]) =>
-  '<button data-act="tab" data-v="'+id+'" aria-selected="'+(S.tab===id)+'">'+icon+'<span>'+label+'</span></button>'
-).join("") + '</nav>';
+/* Barre flottante : les deux modes, en bas, dans la zone du pouce. */
+const NAVPILL = () => '<nav class="navpill">' + [
+  ["pseudo","01","Pseudonymiser"],["depseudo","02","Dé-pseudonymiser"],
+].map(([id,i,label]) =>
+  '<button data-act="tab" data-v="'+id+'" aria-selected="'+(S.mode===id)+'">' +
+  '<span class="i">'+i+'</span><span class="t">'+label+'</span></button>').join("") + '</nav>';
 
 const backHead = (title, sub, right) =>
   '<header class="head">' +
@@ -692,74 +734,32 @@ const backHead = (title, sub, right) =>
     (right || '<span></span>') +
   '</header>';
 
-/* --- 01 Accueil ---------------------------------------------------------- */
-function renderHome(){
-  const recents = [
-    ["Exercice 1.pdf","PDF","Pseudonymisé il y a 2 h · 6 termes"],
-    ["Convention_PNUD.docx","DOCX","Brouillon · 11 termes"],
-    ["Budget_T3_2026.xlsx","XLSX","Pseudonymisé hier · 24 termes"],
-  ];
-  return (
-  '<header class="head" style="grid-template-columns:1fr auto;text-align:left">' +
-    '<div><div class="lbl">Filtre IA</div>' +
-    '<div class="big" style="font-size:25px;margin-top:3px">Pseudonymizer</div></div>' +
-    '<button class="iconbtn filled" data-act="tab" data-v="settings" aria-label="Réglages">'+ICON.gear+'</button>' +
-  '</header>' +
-  '<div class="body pad">' +
-    '<button class="row card" data-act="tab" data-v="projects" style="margin-top:8px">' +
-      '<span class="grow">' +
-        '<span class="lbl" style="display:block">Projet actif</span>' +
-        '<span class="t" style="display:block;margin-top:3px">'+esc(S.project.name)+'</span>' +
-        '<span class="d" style="color:var(--accent-strong);font-family:\'JetBrains Mono\',monospace">'+
-          plural(S.project.terms,"correspondance")+' en mémoire</span>' +
-      '</span>'+ICON.chev+
-    '</button>' +
-
-    '<div class="section">' +
-      '<p class="lbl">Que faire de ce document ?</p>' +
-      '<button class="modecard primary" data-act="mode" data-v="pseudo">' +
-        '<span><span class="t">Pseudonymiser</span>' +
-        '<span class="d" style="display:block">Remplacer les données personnelles par des pseudonymes, et produire le registre.</span></span>' +
-        '<span class="i">01</span>' +
-      '</button>' +
-      '<button class="modecard" data-act="mode" data-v="depseudo">' +
-        '<span><span class="t">Dé-pseudonymiser</span>' +
-        '<span class="d" style="display:block">Restaurer les valeurs d’origine à partir du registre.</span></span>' +
-        '<span class="i">02</span>' +
-      '</button>' +
-    '</div>' +
-
-    '<div class="section">' +
-      '<p class="lbl">Documents récents</p>' +
-      '<div class="card">' +
-        recents.map(([n,f,d]) =>
-          '<button class="row" data-act="recent" data-v="'+esc(n)+'">' +
-            '<span class="fmt">'+f+'</span>' +
-            '<span class="grow"><span class="t">'+esc(n)+'</span><span class="d">'+esc(d)+'</span></span>' +
-            ICON.chev +
-          '</button>').join("") +
-      '</div>' +
-    '</div>' +
-
-    '<div class="section"><div class="local">'+ICON.shield+
-      '<span>Traitement local. Aucune donnée ne quitte l’appareil — ni pendant la lecture du document, ni au moment du remplacement.</span>' +
-    '</div></div>' +
-  '</div>' + TABBAR());
-}
-
-/* --- 02 Import ----------------------------------------------------------- */
-function renderImport(){
+/* --- Racine d'onglet : le dépôt du mode, puis le contexte ----------------- */
+function renderTabRoot(){
   const pseudo = S.mode === "pseudo";
   const d = S.picked.doc, r = S.picked.registry;
   const ready = !!d && (pseudo || !!r);
+  const recents = pseudo
+    ? [["Exercice 1.pdf","PDF","Ouvert il y a 2 h · 6 termes"],
+       ["Convention_PNUD.docx","DOCX","Brouillon · 11 termes"],
+       ["Budget_T3_2026.xlsx","XLSX","Pseudonymisé hier · 24 termes"]]
+    : [["Exercice 1_pseudonymise.pdf","PDF","Registre dans le projet actif"],
+       ["Convention_PNUD_pseudo.docx","DOCX","Registre_PNUD.xlsx · hier"]];
+
   return (
-  backHead(pseudo ? "Pseudonymiser" : "Dé-pseudonymiser", pseudo ? "Étape 01" : "Étape 01") +
-  '<div class="body pad">' +
-    '<p class="lbl accent" style="margin:10px 0 0">'+(pseudo?"Document source":"Document à restaurer")+'</p>' +
+  '<header class="head" style="grid-template-columns:1fr auto auto;text-align:left">' +
+    '<div><div class="lbl">Filtre IA</div>' +
+    '<div class="big" style="font-size:24px;margin-top:2px">Pseudonymizer</div></div>' +
+    '<button class="iconbtn filled" data-act="open" data-v="projects" aria-label="Projets">'+ICON.folder+'</button>' +
+    '<button class="iconbtn filled" data-act="open" data-v="settings" aria-label="Réglages">'+ICON.gear+'</button>' +
+  '</header>' +
+
+  '<div class="body pad tabroot">' +
+    '<p class="lbl accent" style="margin:8px 0 0">'+(pseudo?"Document source":"Document à restaurer")+'</p>' +
     '<h2 class="big" style="margin:8px 0 0">'+(pseudo?"Le document à pseudonymiser":"Le document revenu du traitement")+'</h2>' +
-    '<p class="p" style="margin:10px 0 20px">'+(pseudo
-      ? "Les données structurées — e-mails, téléphones, montants, identifiants — sont pré-détectées. Vous complétez ensuite la sélection à l’écran."
-      : "Ses pseudonymes reprendront les valeurs d’origine. Le document n’a pas besoin d’être identique à celui de départ.")+'</p>' +
+    '<p class="p" style="margin:9px 0 18px">'+(pseudo
+      ? "Les données structurées — e-mails, téléphones, montants, identifiants — sont pré-détectées. Vous complétez la sélection au doigt."
+      : "Ses pseudonymes reprendront les valeurs d’origine, lues dans le registre. Le document n’a pas besoin d’être identique à celui de départ.")+'</p>' +
 
     '<button class="dropzone'+(d?" loaded":"")+'" data-act="pick-doc">' +
       (d
@@ -768,31 +768,52 @@ function renderImport(){
     '</button>' +
 
     '<div class="card" style="margin-top:12px">' +
-      '<button class="row" data-act="pick-reg">' +
-        ICON.sheetf +
+      '<button class="row" data-act="pick-reg">' + ICON.sheetf +
         '<span class="grow"><span class="t">Registre de correspondances</span>' +
         '<span class="d">'+(r ? esc(r)+" · chargé" : (pseudo ? "Facultatif · .xlsx" : "Requis pour restaurer"))+'</span></span>' +
         '<span class="'+(r?"lbl accent":"fmt")+'">'+(r?"OK":"Ajouter")+'</span>' +
       '</button>' +
     '</div>' +
 
-    (pseudo ? '<button class="row" data-act="sample" style="margin-top:14px;justify-content:center">' +
-      '<span class="lbl">ou charger le document d’exemple</span></button>' : "") +
-  '</div>' +
-  '<div class="footbar">' +
-    (!ready && d && !pseudo ? '<p class="p" style="text-align:center;font-size:12px">Ajoutez le registre pour pouvoir restaurer ce document.</p>' : "") +
-    '<button class="cta" data-act="confirm"'+(ready?"":" disabled")+'>' +
-      (pseudo ? "Continuer vers la sélection" : "Continuer vers la restauration") + '</button>' +
-  '</div>');
+    (d && !ready
+      ? '<p class="p" style="margin:14px 2px 0;text-align:center;font-size:12px">Ajoutez le registre pour pouvoir restaurer ce document.</p>' : "") +
+    (d
+      ? '<button class="cta" style="margin-top:14px"'+(ready?"":" disabled")+' data-act="confirm">' +
+          (pseudo ? "Continuer vers la sélection" : "Continuer vers la restauration") + '</button>'
+      : '<button class="row" data-act="sample" style="margin-top:10px;justify-content:center">' +
+          '<span class="lbl">ou charger le document d’exemple</span></button>') +
+
+    '<div class="section">' +
+      '<p class="lbl">Projet</p>' +
+      '<button class="row card" data-act="open" data-v="projects">' +
+        '<span class="grow"><span class="t">'+esc(S.project.name)+'</span>' +
+        '<span class="d" style="color:var(--accent-strong);font-family:\'JetBrains Mono\',monospace">' +
+          plural(S.project.terms,"correspondance")+' en mémoire</span></span>'+ICON.chev+
+      '</button>' +
+    '</div>' +
+
+    '<div class="section">' +
+      '<p class="lbl">'+(pseudo?"Documents récents":"Documents pseudonymisés")+'</p>' +
+      '<div class="card">' + recents.map(([nm,f,dd]) =>
+        '<button class="row" data-act="recent" data-v="'+esc(nm)+'">' +
+          '<span class="fmt">'+f+'</span>' +
+          '<span class="grow"><span class="t">'+esc(nm)+'</span><span class="d">'+esc(dd)+'</span></span>' +
+          ICON.chev + '</button>').join("") + '</div>' +
+    '</div>' +
+
+    '<div class="section"><div class="local">'+ICON.shield+
+      '<span>Traitement local. Le document, le registre et les projets restent sur l’appareil.</span>' +
+    '</div></div>' +
+  '</div>' + NAVPILL());
 }
 
-/* --- 03 Espace de travail ------------------------------------------------ */
+/* --- Espace de travail ---------------------------------------------------- */
 function renderDocBody(){
   const result = S.status === "done" && S.view === "result";
   const pseudo = S.mode === "pseudo";
   let html = '<article class="doc"><h2>'+esc(DOC_TITLE)+'</h2>';
 
-  DOCTOK.forEach((toks,p) => {
+  T().forEach((toks,p) => {
     const ranges = [];
     S.terms.forEach(t => t.hits.forEach(h => { if(h.p === p) ranges.push({from:h.from,to:h.to,term:t}); }));
     if(S.draft && S.draft.p === p) ranges.push({from:S.draft.from,to:S.draft.to,draft:true});
@@ -830,7 +851,8 @@ function renderWork(){
   const result = done && S.view === "result";
   const head = '<header class="head">' +
     '<button class="iconbtn" data-act="back" aria-label="Fermer le document">'+ICON.close+'</button>' +
-    '<div class="title">'+esc(S.picked.doc || DOC_FILE)+'<span class="sub">'+(pseudo?"Pseudonymisation":"Restauration")+'</span></div>' +
+    '<div class="title">'+esc(S.picked.doc || DOCS[S.mode].file)+
+      '<span class="sub">'+(pseudo?"Pseudonymisation":"Restauration")+'</span></div>' +
     '<span></span></header>';
 
   const strip = done
@@ -838,7 +860,9 @@ function renderWork(){
         '<button data-act="view" data-v="source" aria-pressed="'+(!result)+'">Document</button>' +
         '<button data-act="view" data-v="result" aria-pressed="'+result+'">'+(pseudo?"Pseudonymisé":"Restauré")+'</button>' +
       '</div></div>'
-    : '<div class="hint">Appuyez un mot pour le capturer · maintenez pour prendre l’entité entière</div>';
+    : '<div class="hint">'+(pseudo
+        ? "Appuyez un mot pour le capturer · maintenez pour prendre l’entité entière"
+        : "Correspondances fournies par le registre · appuyez un pseudonyme pour l’inspecter")+'</div>';
 
   return head + strip + '<div class="body" id="docBody">' + renderDocBody() + '</div>' +
     (S.status === "running" ? renderRunning() : "");
@@ -848,10 +872,10 @@ function renderRunning(){
   return '<div class="run"><div class="spin"></div>' +
     '<p class="lbl">'+(S.mode==="pseudo"?"Substitution en cours":"Restauration en cours")+'</p>' +
     '<div class="bar"><i style="width:'+Math.round(S.progress)+'%"></i></div>' +
-    '<p class="num">'+PARAS.length+' paragraphes · '+plural(S.terms.length,"correspondance")+'</p></div>';
+    '<p class="num">'+P().length+' paragraphes · '+plural(S.terms.length,"correspondance")+'</p></div>';
 }
 
-/* --- Hors flux : Projets, Réglages --------------------------------------- */
+/* --- Écrans poussés depuis l'en-tête -------------------------------------- */
 function renderProjects(){
   const list = [
     [S.project.name, "12 correspondances · 3 documents", true],
@@ -859,29 +883,23 @@ function renderProjects(){
     ["Marchés publics — lot 4", "5 correspondances · 1 document", false],
   ];
   return (
-  '<header class="head" style="grid-template-columns:1fr auto;text-align:left">' +
-    '<div><div class="lbl">Mémoire des correspondances</div>' +
-    '<div class="big" style="font-size:25px;margin-top:3px">Projets</div></div>' +
-    '<button class="iconbtn filled" data-act="new-project" aria-label="Nouveau projet">'+ICON.plus+'</button>' +
-  '</header>' +
+  backHead("Projets", "Mémoire des correspondances",
+    '<button class="iconbtn filled" data-act="new-project" aria-label="Nouveau projet">'+ICON.plus+'</button>') +
   '<div class="body pad">' +
     '<p class="p" style="margin:6px 0 14px">Un projet retient les paires établies. Il rend la restauration possible sans avoir à retrouver le fichier de registre.</p>' +
-    '<div class="card">' + list.map(([n,d,active]) =>
-      '<button class="row" data-act="select-project" data-v="'+esc(n)+'">' +
-        '<span class="grow"><span class="t">'+esc(n)+'</span><span class="d">'+esc(d)+'</span></span>' +
+    '<div class="card">' + list.map(([nm,d,active]) =>
+      '<button class="row" data-act="select-project" data-v="'+esc(nm)+'">' +
+        '<span class="grow"><span class="t">'+esc(nm)+'</span><span class="d">'+esc(d)+'</span></span>' +
         (active ? '<span style="color:var(--accent-strong)">'+ICON.check+'</span>' : ICON.chev) +
       '</button>').join("") + '</div>' +
     '<button class="cta ghost" data-act="new-project" style="margin-top:14px">Nouveau projet</button>' +
-  '</div>' + TABBAR());
+  '</div>');
 }
 
 function renderSettings(){
   const dark = document.getElementById("phone").dataset.app === "dark";
   return (
-  '<header class="head" style="grid-template-columns:1fr auto;text-align:left">' +
-    '<div><div class="lbl">Version 0.1.5</div>' +
-    '<div class="big" style="font-size:25px;margin-top:3px">Réglages</div></div><span></span>' +
-  '</header>' +
+  backHead("Réglages", "Version 0.1.5") +
   '<div class="body pad">' +
     '<p class="lbl" style="margin:8px 0 8px 2px">Apparence</p>' +
     '<div class="card" style="padding:10px"><div class="seg">' +
@@ -902,16 +920,16 @@ function renderSettings(){
     '</div>' +
 
     '<div class="section"><div class="local">'+ICON.shield+
-      '<span>Le document, le registre et les projets restent sur l’appareil. L’application ne demande aucune permission réseau.</span>' +
+      '<span>L’application ne demande aucune permission réseau. Rien n’est envoyé, à aucun moment.</span>' +
     '</div></div>' +
-  '</div>' + TABBAR());
+  '</div>');
 }
 
 const SCREENS = {
-  home:     {tab:"home",     render:renderHome},
-  projects: {tab:"projects", render:renderProjects},
-  settings: {tab:"settings", render:renderSettings},
-  import:   {render:renderImport},
+  pseudo:   {render:renderTabRoot},
+  depseudo: {render:renderTabRoot},
+  projects: {render:renderProjects},
+  settings: {render:renderSettings},
   work:     {render:renderWork},
 };
 </script>
@@ -986,7 +1004,7 @@ function pop(){
   afterNav(S.stack[S.stack.length-1]);
 }
 function setTab(id){
-  S.tab = id; S.stack = [id];
+  S.tab = id; S.mode = id; S.stack = [id];
   stack.innerHTML = "";
   const el = document.createElement("div");
   el.className = "screen fade";
@@ -996,9 +1014,10 @@ function setTab(id){
 }
 function afterNav(id){
   if(id === "work"){ openDock(); } else { closeDock(); closeModal(); }
-  const mark = id === "work"
-    ? (S.status === "running" ? "run" : S.status === "done" ? "result" : "work")
-    : id;
+  const mark = id !== "work" ? id
+    : S.mode === "depseudo" ? "restore"
+    : S.status === "running" ? "run"
+    : S.status === "done" ? "result" : "work";
   document.querySelectorAll("#rail button").forEach(b =>
     b.setAttribute("aria-current", String(b.dataset.goto === mark)));
 }
@@ -1133,7 +1152,8 @@ function renderTermsSheet(){
         '<span class="dot" style="--mark:'+rgbOf(t.type)+'"></span>' +
         '<span class="tx">'+esc(t.text)+'</span>' +
         '<span class="num" style="'+(t.hits.length?"":"color:var(--destructive)")+'">' +
-          plural(t.hits.length,"occurrence") + (t.auto ? " · auto" : "") + '</span>' +
+          plural(t.hits.length,"occurrence") +
+          (t.fromRegistry ? " · registre" : t.auto ? " · auto" : "") + '</span>' +
       '</span>' +
       '<span class="l2"><span class="tag">'+labelOf(t.type)+'</span>' +
       '<span class="pmono">'+esc(t.pseudo)+'</span></span>' +
@@ -1165,9 +1185,12 @@ function renderTermsSheet(){
   '</div>');
 }
 
-const typeChips = (current) => '<div class="chips" style="padding:0 18px 10px">' +
-  TYPES.map(t => '<button class="chip" data-act="type" data-v="'+t.value+'" aria-pressed="'+(t.value===current)+'">' +
-    '<span class="dot" style="--mark:'+FAMILIES[t.family].rgb+'"></span>'+t.label+'</button>').join("") + '</div>';
+const typeChips = (current, locked) => locked
+  ? '<div style="padding:0 18px 10px"><span class="chip" aria-pressed="true">' +
+      '<span class="dot" style="--mark:'+rgbOf(current)+'"></span>'+labelOf(current)+'</span></div>'
+  : '<div class="chips" style="padding:0 18px 10px">' +
+      TYPES.map(t => '<button class="chip" data-act="type" data-v="'+t.value+'" aria-pressed="'+(t.value===current)+'">' +
+        '<span class="dot" style="--mark:'+FAMILIES[t.family].rgb+'"></span>'+t.label+'</button>').join("") + '</div>';
 
 function renderModal(id, props){
   if(id === "draft"){
@@ -1206,12 +1229,13 @@ function renderModal(id, props){
           '<span style="font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--strong)">'+esc(t.text)+'</span>' +
         '</div>' +
         '<p class="num" style="margin:6px 0 0 16px">'+plural(t.hits.length,"occurrence")+
-          (t.auto ? " · pré-détecté" : "")+'</p>' +
+          (t.fromRegistry ? " · fourni par le registre" : t.auto ? " · pré-détecté" : "")+'</p>' +
       '</div>' +
       '<p class="lbl" style="padding:14px 18px 8px">Type de donnée</p>' +
-      typeChips(t.type) +
+      typeChips(t.type, t.fromRegistry) +
       '<p class="lbl" style="padding:4px 18px 8px">Pseudonyme</p>' +
-      '<div style="padding:0 18px 4px"><input class="field" id="pseudoField" value="'+esc(t.pseudo)+'" aria-label="Pseudonyme"></div>' +
+      '<div style="padding:0 18px 4px"><input class="field" id="pseudoField" value="'+esc(t.pseudo)+'"' +
+        (t.fromRegistry ? " readonly" : "") + ' aria-label="Pseudonyme"></div>' +
       '<div class="sheet-foot">' +
         '<button class="cta ghost" data-act="close-sheet">Terminé</button>' +
         '<button class="cta danger" data-act="remove" data-id="'+t.id+'">Retirer la correspondance</button>' +
@@ -1333,16 +1357,23 @@ phone.addEventListener("click", (e) => {
   const el = e.target.closest("[data-act]"); if(!el) return;
   const act = el.dataset.act, v = el.dataset.v;
 
-  if(act === "tab"){ if(S.tab !== v || S.stack.length > 1) setTab(v); return; }
-  if(act === "back"){ pop(); return; }
-
-  if(act === "mode"){
-    S.mode = v; S.picked = {doc:null, registry:null}; S.terms = []; S.nextId = 1;
-    S.status = "idle"; S.view = "source";
-    push("import"); return;
+  if(act === "tab"){
+    if(S.mode !== v){
+      // Changer de mode change de document et de correspondances : on repart net.
+      S.picked = {doc:null, registry:null}; S.terms = []; S.nextId = 1;
+      S.status = "idle"; S.view = "source"; S.draft = null;
+      setTab(v); tick(6);
+    }else if(S.stack.length > 1){ setTab(v); }
+    return;
   }
-  if(act === "recent"){ S.mode = "pseudo"; S.picked = {doc:v, registry:null}; push("import"); return; }
-  if(act === "sample"){ S.picked.doc = DOC_FILE; paint(); toast("Document d’exemple chargé"); return; }
+  if(act === "open"){ push(v); return; }
+  if(act === "back"){ pop(); return; }
+  if(act === "recent"){
+    S.picked.doc = v;
+    if(S.mode === "depseudo") S.picked.registry = "Projet « " + S.project.name + " »";
+    paint(); tick(8); return;
+  }
+  if(act === "sample"){ S.picked.doc = DOCS[S.mode].file; paint(); toast("Document d’exemple chargé"); return; }
   if(act === "pick-doc"){ openModal("picker", {kind:"doc"}); return; }
   if(act === "pick-reg"){ openModal("picker", {kind:"registry"}); return; }
   if(act === "picked"){
@@ -1351,9 +1382,13 @@ phone.addEventListener("click", (e) => {
     return;
   }
   if(act === "confirm"){
-    seedAuto();
-    push("work");
-    setTimeout(() => toast(plural(S.terms.length,"donnée structurée") + " pré-détectée" + (S.terms.length>1?"s":"")), 420);
+    if(S.mode === "pseudo"){
+      seedAuto(); push("work");
+      setTimeout(() => toast(plural(S.terms.length,"donnée structurée") + " pré-détectée" + (S.terms.length>1?"s":"")), 420);
+    }else{
+      loadRegistry(); push("work");
+      setTimeout(() => toast(plural(S.terms.length,"correspondance") + " lue" + (S.terms.length>1?"s":"") + " dans le registre"), 420);
+    }
     return;
   }
   if(act === "view"){ S.view = v; paint(); return; }
@@ -1423,17 +1458,19 @@ phone.addEventListener("keydown", (e) => {
 
 /* --- Gestes sur le document ---------------------------------------------- */
 let press = null;
-function editable(){ return S.status !== "running" && !(S.status === "done" && S.view === "result"); }
+function viewing(){ return S.status === "running" || (S.status === "done" && S.view === "result"); }
+/* En restauration, les paires viennent du registre : rien à sélectionner. */
+function creatable(){ return !viewing() && S.mode === "pseudo"; }
 
 phone.addEventListener("pointerdown", (e) => {
   const body = document.getElementById("docBody");
-  if(!body || !body.contains(e.target) || !editable()) return;
+  if(!body || !body.contains(e.target) || viewing()) return;
   const el = e.target.closest("[data-i]");
   if(!el) return;
   press = {x:e.clientX, y:e.clientY, el, fired:false, timer:null};
-  if(!el.dataset.term){
+  if(!el.dataset.term && creatable()){
     const p = Number(el.dataset.p), i = Number(el.dataset.i);
-    if(DOCTOK[p] && DOCTOK[p][i] && DOCTOK[p][i].word){
+    if(T()[p] && T()[p][i] && T()[p][i].word){
       press.timer = setTimeout(() => {
         press.fired = true;
         const r = entityAt(p, i);
@@ -1454,8 +1491,9 @@ phone.addEventListener("pointerup", () => {
   const {el, fired} = press; press = null;
   if(fired) return;
   if(el.dataset.term){ openModal("term", {id:Number(el.dataset.term)}); return; }
+  if(!creatable()) return;
   const p = Number(el.dataset.p), i = Number(el.dataset.i);
-  if(DOCTOK[p] && DOCTOK[p][i] && DOCTOK[p][i].word) setDraft(p, i, i);
+  if(T()[p] && T()[p][i] && T()[p][i].word) setDraft(p, i, i);
 });
 phone.addEventListener("pointercancel", () => { if(press){ clearTimeout(press.timer); press = null; } });
 scrim.addEventListener("click", () => { if(MODAL.el) closeModal(); else if(DOCK.el) setDockVisible(DOCK.snaps[0]); });
@@ -1464,17 +1502,22 @@ scrim.addEventListener("click", () => { if(MODAL.el) closeModal(); else if(DOCK.
    Rail d'atelier
    ========================================================================= */
 const RAIL = [
-  ["home","01","Accueil","Projet, modes, documents récents"],
-  ["import","02","Import","Fichier et registre, sans glisser-déposer"],
-  ["work","03","Espace de travail","Sélection tactile et feuille des termes"],
-  ["run","04","Traitement","Substitution locale"],
-  ["result","05","Livrables","Aperçu du résultat et partage"],
-  ["projects","","Projets","Hors flux"],
-  ["settings","","Réglages","Hors flux"],
+  {group:"Onglet 01 — Pseudonymiser"},
+  {id:"pseudo",   t:"Dépôt",              d:"Fichier, registre facultatif"},
+  {id:"work",     t:"Espace de travail",  d:"Sélection tactile, feuille des termes"},
+  {id:"run",      t:"Traitement",         d:"Substitution locale"},
+  {id:"result",   t:"Livrables",          d:"Aperçu du résultat et partage"},
+  {group:"Onglet 02 — Dé-pseudonymiser"},
+  {id:"depseudo", t:"Dépôt et registre",  d:"Le registre est requis"},
+  {id:"restore",  t:"Restauration",       d:"Pseudonymes reconnus, valeurs rendues"},
+  {group:"Depuis l’en-tête"},
+  {id:"projects", t:"Projets",            d:"Mémoire des correspondances"},
+  {id:"settings", t:"Réglages",           d:"Thème, guide, mise à jour"},
 ];
-document.getElementById("rail").innerHTML = RAIL.map(([id,idx,t,d]) =>
-  '<button data-goto="'+id+'"><span class="idx">'+(idx||"·")+'</span>' +
-  '<span>'+t+'<span class="sub">'+d+'</span></span></button>').join("");
+const railEl = document.getElementById("rail");
+railEl.innerHTML = RAIL.map(r => r.group
+  ? '<p class="rail-group">'+r.group+'</p>'
+  : '<button data-goto="'+r.id+'">'+r.t+'<span class="sub">'+r.d+'</span></button>').join("");
 
 const MANUAL = [
   ["SahelTech Industries","ENTREPRISE"],["Mariama Diallo","PERSONNE"],
@@ -1485,27 +1528,32 @@ function fullTerms(){
   MANUAL.forEach(([text,type]) => S.terms.push(makeTerm(text,type)));
 }
 function resetFlow(){
-  S.mode = "pseudo"; S.picked = {doc:null, registry:null};
+  S.picked = {doc:null, registry:null};
   S.terms = []; S.nextId = 1; S.status = "idle"; S.view = "source"; S.draft = null;
   closeModal(); closeDock();
 }
-document.getElementById("rail").addEventListener("click", (e) => {
+railEl.addEventListener("click", (e) => {
   const b = e.target.closest("button[data-goto]"); if(!b) return;
   const go = b.dataset.goto;
   resetFlow();
-  if(go === "home"){ setTab("home"); return; }
-  if(go === "projects" || go === "settings"){ setTab(go); return; }
-  if(go === "import"){ setTab("home"); push("import"); return; }
-  S.picked.doc = DOC_FILE;
-  setTab("home");
-  push("import");
-  if(go === "work"){ seedAuto(); push("work"); return; }
-  fullTerms();
-  if(go === "run"){
-    push("work");
-    setTimeout(runProcess, 260);
+
+  if(go === "pseudo" || go === "depseudo"){ setTab(go); return; }
+  if(go === "projects" || go === "settings"){ setTab("pseudo"); push(go); return; }
+
+  if(go === "restore"){
+    setTab("depseudo");
+    S.picked.doc = DOCS.depseudo.file;
+    S.picked.registry = "Registre_Exercice 1.xlsx";
+    paint(); loadRegistry(); push("work");
     return;
   }
+
+  setTab("pseudo");
+  S.picked.doc = DOCS.pseudo.file;
+  paint();
+  if(go === "work"){ seedAuto(); push("work"); return; }
+  fullTerms();
+  if(go === "run"){ push("work"); setTimeout(runProcess, 260); return; }
   S.status = "done"; S.view = "result"; S.progress = 100;
   push("work");
   setTimeout(() => openModal("livrables"), 380);
@@ -1525,5 +1573,5 @@ document.getElementById("themeToggle").addEventListener("click", (e) => {
 });
 
 /* --- Départ -------------------------------------------------------------- */
-setTab("home");
+setTab("pseudo");
 </script>
