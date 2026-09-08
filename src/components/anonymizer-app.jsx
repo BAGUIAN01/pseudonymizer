@@ -3,11 +3,13 @@
 import { useCallback, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 
+import { MobileApp } from "@/components/mobile/mobile-app";
 import { ModeSidebar } from "@/components/mode-sidebar";
 import { TopBar } from "@/components/top-bar";
 import { DropStage } from "@/components/drop-stage";
 import { DocumentView } from "@/components/document-view";
 import { TermPanel } from "@/components/term-panel";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useTauriFileDrop } from "@/hooks/use-tauri-file-drop";
 import { useAnonymizer } from "@/store/use-anonymizer";
 
@@ -17,6 +19,38 @@ const Tour = dynamic(() => import("@/components/tour").then((m) => m.Tour), {
 });
 
 /**
+ * Choix de la disposition.
+ *
+ * La bascule est faite par la feuille de style, pas par le script : la
+ * largeur n'existe pas au rendu serveur, et attendre un effet pour la mesurer
+ * ferait peindre la mauvaise disposition avant de la corriger. Les deux
+ * arbres sont donc rendus, la requete de media en montre un — puis, une fois
+ * la mesure connue, l'autre est demonte pour ne pas garder un document en
+ * double dans le DOM.
+ *
+ * Le point de rupture est celui de `md`, et il est repete dans
+ * `useIsMobile` : les deux doivent dire la meme chose.
+ */
+export function AnonymizerApp() {
+  const isMobile = useIsMobile();
+
+  return (
+    <>
+      {isMobile !== true && (
+        <div className="hidden h-full md:block">
+          <DesktopApp />
+        </div>
+      )}
+      {isMobile !== false && (
+        <div className="h-full md:hidden">
+          <MobileApp />
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
  * Fenetre applicative. L'interface occupe toute la surface disponible : c'est
  * un logiciel installe, pas une page web, et il n'y a donc aucun cadre de
  * fenetre a dessiner.
@@ -24,7 +58,7 @@ const Tour = dynamic(() => import("@/components/tour").then((m) => m.Tour), {
  * Toute la zone de travail accepte le glisser-deposer, a n'importe quel moment
  * du flux : deposer un fichier remplace le document ouvert.
  */
-export function AnonymizerApp() {
+function DesktopApp() {
   const isReady = useAnonymizer((s) => s.isReady());
   const openDroppedAny = useAnonymizer((s) => s.openDroppedAny);
 

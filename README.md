@@ -91,6 +91,35 @@ se lit dans le panneau. Le vert citron reste réservé aux actions.
 Toute la zone de travail accepte le glisser-déposer, à n'importe quel moment du
 flux.
 
+## Au doigt
+
+Sous 768 px, l'application prend une autre disposition. La bascule est faite
+par la feuille de style et non par le script : la largeur n'existe pas au rendu
+serveur, et attendre un effet pour la mesurer ferait peindre la mauvaise
+disposition avant de la corriger. Les deux arbres sont rendus, la requête de
+média en montre un, puis l'autre est démonté.
+
+Rien n'est duplique : le store, la lecture des documents, la tokenisation, la
+pré-détection et les livrables sont ceux du bureau. Seules les mécaniques qui
+n'ont pas d'équivalent tactile sont réécrites.
+
+| Au bureau | Au doigt |
+| --- | --- |
+| Glisser-déposer | Deux dépôts qui occupent l'écran, sélecteur système |
+| Sélection au curseur | Un appui prend le mot |
+| Double-clic sur un nom | Un appui long prend l'entité entière |
+| Barre ancrée à la sélection | Feuille basse, dans la zone du pouce |
+| Panneau latéral de 360 px | Feuille à trois paliers, par-dessus le document |
+| Colonne de modes | Deux pastilles flottantes : les modes, puis le projet |
+
+Les barres flottantes sont en verre, et le contenu passe dessous. Leur conteneur
+est en `overflow: clip` et non `hidden` : une feuille est plus haute que l'écran
+et remontée par une translation, or le navigateur calcule la mise au point sur
+la position de mise en page, que la translation ne déplace pas. Avec `hidden`,
+appuyer un bouton du bas d'une feuille faisait défiler le conteneur pour
+« révéler » ce bouton, et l'écran entier remontait. Un conteneur clippé n'est
+pas défilable.
+
 ## État d'avancement
 
 L'interface est complète et fonctionnelle. Le backend Rust est déclaré mais pas

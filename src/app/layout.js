@@ -41,7 +41,12 @@ export default function RootLayout({ children }) {
           disableTransitionOnChange
         >
           {children}
-          <Toaster position="bottom-center" />
+          {/*
+            Sur telephone, le bas de l'ecran appartient a la feuille des
+            correspondances : le message se pose au-dessus d'elle, sans quoi
+            il masque la poignee au moment meme ou l'on en a besoin.
+          */}
+          <Toaster position="bottom-center" mobileOffset={{ bottom: "120px" }} />
         </ThemeProvider>
       </body>
     </html>
